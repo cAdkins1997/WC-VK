@@ -47,6 +47,10 @@ struct Pipeline {
     VkPipeline pipeline;
 };
 
+struct WorkDetails {
+
+};
+
 typedef Buffer* VBuffer;
 typedef Image* VImage;
 typedef Shader* VShader;
@@ -61,11 +65,15 @@ public:
     VImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped);
     VShader create_shader(const char* filePath);
     VPipeline create_pipeline(VkPipelineCreateFlagBits type);
-    void SubmitGraphicsWork(GraphicsContext& context);
-    void SubmitComputeWork(ComputeContext& context);
-    void SubmitRaytracingWork(RaytracingContext& context);
-    void SubmitUploadWork(UploadContext& context);
+    void submit_graphics_work(GraphicsContext& context);
+    void submit_compute_work(ComputeContext& context);
+    void submit_raytracing_work(RaytracingContext& context);
+    void submit_upload_work(UploadContext& context);
 
+    void wait_on_work(WorkDetails);
+    void present();
+
+private:
     std::vector<Buffer> buffers;
     std::vector<Image> images;
     std::vector<Shader> shaders;
@@ -74,6 +82,8 @@ public:
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 
+
+public:
     VkDevice device = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
@@ -86,12 +96,27 @@ public:
     std::vector<VkImageView> swapChainImageViews{};
     const uint32_t width = 1920, height = 1080;
 
+private:
+    struct QueueFamilyIndices {
+        std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> computeFamily;
+        std::optional<uint32_t> presentFamily;
+
+        [[nodiscard]] bool isComplete() const {
+            return graphicsFamily.has_value() && computeFamily.has_value() && presentFamily.has_value();
+        }
+    };
+
+public:
+    uint32_t graphicsQueueIndex = 0, computeQueueIndex = 0, presentQueueIndex = 0;
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue computeQueue = VK_NULL_HANDLE;
     VkQueue presentQueue = VK_NULL_HANDLE;
 
-    VmaAllocator allocator;
+public:
+    VmaAllocator allocator{};
 
+public:
     Device(const Device&) = delete;
     Device& operator=(const Device&) = delete;
 
@@ -105,17 +130,6 @@ private:
     void init_swapchain();
     void init_image_views();
     void init_allocator();
-
-private:
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> computeFamily;
-        std::optional<uint32_t> presentFamily;
-
-        [[nodiscard]] bool isComplete() const {
-            return graphicsFamily.has_value() && computeFamily.has_value() && presentFamily.has_value();
-        }
-    };
 
     struct SwapChainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;

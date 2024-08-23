@@ -119,3 +119,38 @@ VkDescriptorSetAllocateInfo vkinit::ds_ai(VkDescriptorPool ds, uint32_t count) {
     allocateInfo.descriptorSetCount = count;
     return allocateInfo;
 }
+
+VkCommandPoolCreateInfo vkinit::command_pool_CI(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex) {
+    VkCommandPoolCreateInfo commandPoolCI { .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    commandPoolCI.pNext = nullptr;
+    commandPoolCI.flags = flags;
+    commandPoolCI.queueFamilyIndex = queueFamilyIndex;
+    return commandPoolCI;
+}
+
+VkCommandBufferAllocateInfo vkinit::command_buffer_AI(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t count) {
+    VkCommandBufferAllocateInfo commandBufferAI { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    commandBufferAI.pNext = nullptr;
+    commandBufferAI.commandPool = commandPool;
+    commandBufferAI.level = level;
+    commandBufferAI.commandBufferCount = count;
+    return commandBufferAI;
+}
+
+VkCommandBufferBeginInfo vkinit::command_buffer_BI(VkCommandBufferUsageFlags usageFlags) {
+    VkCommandBufferBeginInfo commandBufferBI { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    commandBufferBI.flags = usageFlags;
+    commandBufferBI.pNext = nullptr;
+    return commandBufferBI;
+}
+
+VkRenderingInfo vkinit::rendering_info(VkRenderingFlags flags, VkRect2D area, uint32_t layerCount, uint32_t viewMask,
+    uint32_t colorAttachmentCount) {
+    VkRenderingInfo renderingInfo { .sType =  VK_STRUCTURE_TYPE_RENDERING_INFO };
+    renderingInfo.pNext = nullptr;
+    renderingInfo.flags = flags;
+    renderingInfo.renderArea = area;
+    renderingInfo.layerCount = layerCount;
+    renderingInfo.viewMask = viewMask;
+    renderingInfo.colorAttachmentCount = colorAttachmentCount;
+}

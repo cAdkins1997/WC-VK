@@ -53,6 +53,12 @@ namespace vkinit {
         );
 
     VkDescriptorSetAllocateInfo ds_ai(VkDescriptorPool ds, uint32_t count);
+
+    VkCommandPoolCreateInfo command_pool_CI(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex);
+    VkCommandBufferAllocateInfo command_buffer_AI(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t count);
+    VkCommandBufferBeginInfo command_buffer_BI(VkCommandBufferUsageFlags usageFlags);
+
+    VkRenderingInfo rendering_info(VkRenderingFlags flags, VkRect2D area, uint32_t layerCount, uint32_t viewMask, uint32_t colorAttachmentCount);
 }
 
 #endif //VKINIT_H

@@ -108,20 +108,26 @@ VPipeline Device::create_pipeline(VkPipelineCreateFlagBits type) {
     return &pipelines[pipelines.size()];
 }
 
-void Device::SubmitGraphicsWork(GraphicsContext &context) {
+void Device::submit_graphics_work(GraphicsContext &context) {
 
 }
 
-void Device::SubmitComputeWork(ComputeContext &context) {
+void Device::submit_compute_work(ComputeContext &context) {
 
 }
 
-void Device::SubmitRaytracingWork(RaytracingContext &context) {
+void Device::submit_raytracing_work(RaytracingContext &context) {
 
 }
 
-void Device::SubmitUploadWork(UploadContext &context) {
+void Device::submit_upload_work(UploadContext &context) {
 
+}
+
+void Device::wait_on_work(WorkDetails) {
+}
+
+void Device::present() {
 }
 
 void Device::init_window() {
@@ -209,6 +215,8 @@ void Device::init_logical_device() {
     VkPhysicalDeviceDescriptorIndexingFeatures descIndexingFeatures{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
     descIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = true;
     descIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = true;
+    descIndexingFeatures.descriptorBindingPartiallyBound = true;
+    descIndexingFeatures.runtimeDescriptorArray = true;
     descIndexingFeatures.shaderUniformBufferArrayNonUniformIndexing = true;
     descIndexingFeatures.descriptorBindingUniformBufferUpdateAfterBind = true;
     descIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = true;
@@ -237,8 +245,11 @@ void Device::init_logical_device() {
     VK_CHECK(vkCreateDevice(physicalDevice, &deviceCI, nullptr, &device));
 
     vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+    graphicsQueueIndex = indices.graphicsFamily.value();
     vkGetDeviceQueue(device, indices.computeFamily.value(), 0, &computeQueue);
+    computeQueueIndex = indices.computeFamily.value();
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    presentQueueIndex = indices.presentFamily.value();
 }
 
 void Device::init_swapchain() {

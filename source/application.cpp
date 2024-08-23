@@ -18,7 +18,17 @@ void Application::run() {
     }
 }
 
+void Application::draw() {
+    GraphicsContext graphicsContext;
+    VkCommandBufferAllocateInfo commandBufferAI = vkinit::command_buffer_AI(commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+    vkAllocateCommandBuffers(device.device, &commandBufferAI, &commandBuffer);
+    graphicsContext.begin();
+}
+
 void Application::init() {
+    uint32_t graphicsIndex = device.graphicsQueueIndex;
+    VkCommandPoolCreateInfo commandPoolCI = vkinit::command_pool_CI(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphicsIndex);
+    vkCreateCommandPool(device.device, &commandPoolCI, nullptr, &commandPool);
 }
 
 void Application::init_descriptors() {
