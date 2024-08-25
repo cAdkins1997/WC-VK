@@ -2,11 +2,11 @@
 #include "application.h"
 
 Application::Application() {
-    init();
     run();
 }
 
 Application::~Application() {
+
 }
 
 void Application::run() {
@@ -19,16 +19,25 @@ void Application::run() {
 }
 
 void Application::draw() {
-    GraphicsContext graphicsContext;
-    VkCommandBufferAllocateInfo commandBufferAI = vkinit::command_buffer_AI(commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-    vkAllocateCommandBuffers(device.device, &commandBufferAI, &commandBuffer);
-    graphicsContext.begin();
-}
+    FrameData& currentFrame = device.get_current_frame();
+    uint32_t swapchainImageIndex = device.get_swapchain_image_index();
+    VkImage& currentSwapchainImage = device.swapchainImages[swapchainImageIndex];
 
-void Application::init() {
-    uint32_t graphicsIndex = device.graphicsQueueIndex;
-    VkCommandPoolCreateInfo commandPoolCI = vkinit::command_pool_CI(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphicsIndex);
-    vkCreateCommandPool(device.device, &commandPoolCI, nullptr, &commandPool);
+    GraphicsContext graphicsContext(currentFrame.commandBuffer);
+    graphicsContext.begin();
+    graphicsContext.image_barrier(currentSwapchainImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    VkClearColorValue clearValue;
+    float flash = std::abs(std::sin(device.frameNumber / 120.f));
+    clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+
+    VkImageSubresourceRange clearRange = vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCmdClearColorImage(currentFrame.commandBuffer, currentSwapchainImage, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+
+    graphicsContext.image_barrier(currentSwapchainImage, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    graphicsContext.end();
+    device.submit_graphics_work(graphicsContext);
+    device.present();
 }
 
 void Application::init_descriptors() {

@@ -57,8 +57,32 @@ namespace vkinit {
     VkCommandPoolCreateInfo command_pool_CI(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex);
     VkCommandBufferAllocateInfo command_buffer_AI(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t count);
     VkCommandBufferBeginInfo command_buffer_BI(VkCommandBufferUsageFlags usageFlags);
+    VkCommandBufferSubmitInfo command_buffer_SI(VkCommandBuffer commandBuffer);
+    VkSubmitInfo2 submit_info(
+        VkCommandBufferSubmitInfo* cmd,
+        VkSemaphoreSubmitInfo* signalSemaphoreInfo,
+        VkSemaphoreSubmitInfo* waitSemaphoreInfo);
+
+    VkSemaphoreSubmitInfo semaphore_SI(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore);
+
+    VkPresentInfoKHR present_info(uint32_t swapchainCount, uint32_t semaphoreCount);
 
     VkRenderingInfo rendering_info(VkRenderingFlags flags, VkRect2D area, uint32_t layerCount, uint32_t viewMask, uint32_t colorAttachmentCount);
+
+    VkRenderingAttachmentInfo rendering_attachment_info(
+        VkImageView view,
+        VkImageLayout layout,
+        VkResolveModeFlagBits resolveMode,
+        VkImageView resolveView,
+        VkImageLayout resolveLayout,
+        VkAttachmentLoadOp loadOp,
+        VkAttachmentStoreOp storeOp,
+        VkClearValue clearValue
+        );
+
+    VkFenceCreateInfo fence_CI(VkFenceCreateFlags flags);
+
+    VkSemaphoreCreateInfo semaphore_CI(VkSemaphoreCreateFlags flags);
 }
 
 #endif //VKINIT_H

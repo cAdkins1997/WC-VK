@@ -24,6 +24,15 @@ struct ComputeContext;
 struct RaytracingContext;
 struct UploadContext;
 
+struct FrameData {
+    VkCommandPool commandPool = VK_NULL_HANDLE;
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+
+    VkSemaphore swapchainSemaphore = VK_NULL_HANDLE;
+    VkSemaphore renderSemaphore = VK_NULL_HANDLE;
+    VkFence renderFence = VK_NULL_HANDLE;
+};
+
 struct Buffer {
     VkBuffer buffer;
     VmaAllocation allocation;
@@ -47,14 +56,12 @@ struct Pipeline {
     VkPipeline pipeline;
 };
 
-struct WorkDetails {
-
-};
-
 typedef Buffer* VBuffer;
 typedef Image* VImage;
 typedef Shader* VShader;
 typedef Pipeline* VPipeline;
+
+constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 class Device {
 public:
@@ -65,15 +72,30 @@ public:
     VImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped);
     VShader create_shader(const char* filePath);
     VPipeline create_pipeline(VkPipelineCreateFlagBits type);
+
     void submit_graphics_work(GraphicsContext& context);
     void submit_compute_work(ComputeContext& context);
     void submit_raytracing_work(RaytracingContext& context);
     void submit_upload_work(UploadContext& context);
 
-    void wait_on_work(WorkDetails);
+    void wait_on_work();
     void present();
 
+public:
+    FrameData& get_current_frame() { return frames[frameNumber % MAX_FRAMES_IN_FLIGHT]; };
+    uint32_t get_swapchain_image_index() {
+        uint32_t swapchainImageIndex;
+        vkAcquireNextImageKHR(device, swapchain, 1000000000, get_current_frame().swapchainSemaphore, nullptr, &swapchainImageIndex);
+        return swapchainImageIndex;
+    }
+
+public:
+    uint32_t frameNumber = 0;
+
 private:
+    uint32_t swapchainImageIndex = 0;
+    FrameData frames[MAX_FRAMES_IN_FLIGHT];
+
     std::vector<Buffer> buffers;
     std::vector<Image> images;
     std::vector<Shader> shaders;
@@ -128,6 +150,8 @@ private:
     void init_physical_device();
     void init_logical_device();
     void init_swapchain();
+    void init_commands();
+    void init_sync_objects();
     void init_image_views();
     void init_allocator();
 
@@ -143,6 +167,11 @@ private:
 
     const std::vector<const char*> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
+    };
+
+    const std::vector<VkValidationFeatureEnableEXT> enabledValidationFeatures {
+        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
     };
 
 private:
@@ -184,7 +213,7 @@ x                                                           \
 do {                                                        \
     if (x) {                                                \
         std::cerr << string_VkResult(x) ;                   \
-        Device::~Device();                                          \
+        Device::~Device();                                  \
         abort();                                            \
     }                                                       \
 }                                                           \

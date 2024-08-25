@@ -16,15 +16,11 @@ public:
     void draw();
 
 private:
-    void init();
     void init_descriptors();
 
 private:
     Device device;
     Buffer buffer;
-
-    VkCommandPool commandPool = VK_NULL_HANDLE;
-    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 };
 
 

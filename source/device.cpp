@@ -9,11 +9,15 @@ Device::Device() {
     init_physical_device();
     init_logical_device();
     init_swapchain();
+    init_commands();
+    init_sync_objects();
     init_image_views();
     init_allocator();
 }
 
 Device::~Device() {
+    vkDeviceWaitIdle(device);
+
     for (auto imageView : swapChainImageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }
@@ -28,6 +32,10 @@ Device::~Device() {
 
     for (auto shader : shaders) {
         vkDestroyShaderModule(device, shader.module, nullptr);
+    }
+
+    for (auto frame : frames) {
+        vkDestroyCommandPool(device, frame.commandPool, nullptr);
     }
 
     vkDestroySwapchainKHR(device, swapchain, nullptr);
@@ -109,7 +117,14 @@ VPipeline Device::create_pipeline(VkPipelineCreateFlagBits type) {
 }
 
 void Device::submit_graphics_work(GraphicsContext &context) {
+    VkCommandBuffer cmd = context.commandBuffer;
+    VkCommandBufferSubmitInfo commandBufferSI = vkinit::command_buffer_SI(cmd);
 
+    auto& [commandPool, commandBuffer, swapchainSemaphore, renderSemaphore, renderFence] = get_current_frame();
+    VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_SI(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, swapchainSemaphore);
+    VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_SI(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, renderSemaphore);
+    VkSubmitInfo2 submitInfo = vkinit::submit_info(&commandBufferSI, &signalInfo, &waitInfo);
+    vkQueueSubmit2(graphicsQueue, 1, &submitInfo, renderFence);
 }
 
 void Device::submit_compute_work(ComputeContext &context) {
@@ -124,10 +139,18 @@ void Device::submit_upload_work(UploadContext &context) {
 
 }
 
-void Device::wait_on_work(WorkDetails) {
+void Device::wait_on_work() {
+    vkWaitForFences(device, 1, &get_current_frame().renderFence, true, 1000000000);
+    vkResetFences(device, 1, &get_current_frame().renderFence);
 }
 
 void Device::present() {
+    FrameData& currentFrame = get_current_frame();
+    VkPresentInfoKHR presentInfo = vkinit::present_info(1, 1);
+    presentInfo.pSwapchains = &swapchain;
+    presentInfo.pWaitSemaphores = &currentFrame.renderSemaphore;
+    presentInfo.pImageIndices = &swapchainImageIndex;
+    vkQueuePresentKHR(graphicsQueue, &presentInfo);
 }
 
 void Device::init_window() {
@@ -149,11 +172,15 @@ void Device::init_instance() {
     instanceCI.ppEnabledExtensionNames = extensions.data();
 
     VkDebugUtilsMessengerCreateInfoEXT debugCI{};
-    if (enableValidationLayers) {
+    VkValidationFeaturesEXT validationFeatures{ .sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+    if constexpr (enableValidationLayers) {
+        validationFeatures.enabledValidationFeatureCount = enabledValidationFeatures.size();
+        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures.data();
+        validationFeatures.pNext = &debugCI;
         instanceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         instanceCI.ppEnabledLayerNames = validationLayers.data();
         populate_debug_messenger_CI(debugCI);
-        instanceCI.pNext = &debugCI;
+        instanceCI.pNext = &validationFeatures;
     } else {
         instanceCI.enabledLayerCount = 0;
         instanceCI.pNext = nullptr;
@@ -291,6 +318,27 @@ void Device::init_swapchain() {
     vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapchainImages.data());
     swapchainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
+}
+
+void Device::init_commands() {
+    VkCommandPoolCreateInfo commandPoolCI =
+        vkinit::command_pool_CI(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphicsQueueIndex);
+    for (auto frame : frames) {
+        vkCreateCommandPool(device, &commandPoolCI, nullptr, &frame.commandPool);
+        VkCommandBufferAllocateInfo commandBufferAI = vkinit::command_buffer_AI(frame.commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+        vkAllocateCommandBuffers(device, &commandBufferAI, &frame.commandBuffer);
+    }
+}
+
+void Device::init_sync_objects() {
+    VkFenceCreateInfo fenceCI = vkinit::fence_CI(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkSemaphoreCreateInfo semaphoreCI = vkinit::semaphore_CI(0);
+
+    for (auto [commandPool, commandBuffer, swapchainSemaphore, renderSemaphore, renderFence] : frames) {
+        vkCreateFence(device, &fenceCI, nullptr, &renderFence);
+        vkCreateSemaphore(device, &semaphoreCI, nullptr, &swapchainSemaphore);
+        vkCreateSemaphore(device, &semaphoreCI, nullptr, &renderSemaphore);
+    }
 }
 
 void Device::init_image_views() {

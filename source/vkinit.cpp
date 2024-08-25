@@ -144,13 +144,92 @@ VkCommandBufferBeginInfo vkinit::command_buffer_BI(VkCommandBufferUsageFlags usa
     return commandBufferBI;
 }
 
-VkRenderingInfo vkinit::rendering_info(VkRenderingFlags flags, VkRect2D area, uint32_t layerCount, uint32_t viewMask,
-    uint32_t colorAttachmentCount) {
-    VkRenderingInfo renderingInfo { .sType =  VK_STRUCTURE_TYPE_RENDERING_INFO };
-    renderingInfo.pNext = nullptr;
+VkCommandBufferSubmitInfo vkinit::command_buffer_SI(VkCommandBuffer commandBuffer) {
+    VkCommandBufferSubmitInfo submitInfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO, .pNext = nullptr };
+    submitInfo.commandBuffer = commandBuffer;
+    submitInfo.deviceMask = 0;
+    return submitInfo;
+}
+
+VkSubmitInfo2 vkinit::submit_info(
+    VkCommandBufferSubmitInfo *cmd,
+    VkSemaphoreSubmitInfo *signalSemaphoreInfo,
+    VkSemaphoreSubmitInfo *waitSemaphoreInfo)
+{
+    VkSubmitInfo2 submitInfo { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2, .pNext =nullptr };
+    submitInfo.waitSemaphoreInfoCount = waitSemaphoreInfo == nullptr ? 0 : 1;
+    submitInfo.pWaitSemaphoreInfos = waitSemaphoreInfo;
+
+    submitInfo.signalSemaphoreInfoCount = signalSemaphoreInfo == nullptr ? 0 : 1;
+    submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfo;
+
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = cmd;
+
+    return submitInfo;
+}
+
+VkSemaphoreSubmitInfo vkinit::semaphore_SI(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore) {
+    VkSemaphoreSubmitInfo submitInfo { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, .pNext = nullptr };
+    submitInfo.semaphore = semaphore;
+    submitInfo.stageMask = stageMask;
+    submitInfo.deviceIndex = 0;
+    submitInfo.value = 1;
+    return submitInfo;
+}
+
+VkPresentInfoKHR vkinit::present_info(uint32_t swapchainCount, uint32_t semaphoreCount) {
+    VkPresentInfoKHR presentInfo { .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, .pNext = nullptr };
+    presentInfo.swapchainCount = swapchainCount;
+    presentInfo.waitSemaphoreCount = semaphoreCount;
+    return presentInfo;
+}
+
+VkRenderingInfo vkinit::rendering_info(
+    VkRenderingFlags flags,
+    VkRect2D area,
+    uint32_t layerCount,
+    uint32_t viewMask,
+    uint32_t colorAttachmentCount)
+{
+    VkRenderingInfo renderingInfo { .sType =  VK_STRUCTURE_TYPE_RENDERING_INFO, .pNext = nullptr };
     renderingInfo.flags = flags;
     renderingInfo.renderArea = area;
     renderingInfo.layerCount = layerCount;
     renderingInfo.viewMask = viewMask;
     renderingInfo.colorAttachmentCount = colorAttachmentCount;
+}
+
+VkRenderingAttachmentInfo vkinit::rendering_attachment_info(
+    VkImageView view,
+    VkImageLayout layout,
+    VkResolveModeFlagBits resolveMode,
+    VkImageView resolveView,
+    VkImageLayout resolveLayout,
+    VkAttachmentLoadOp loadOp,
+    VkAttachmentStoreOp storeOp,
+    VkClearValue clearValue)
+{
+    VkRenderingAttachmentInfo renderingAttachmentInfo { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO, .pNext = nullptr };
+    renderingAttachmentInfo.imageView = view;
+    renderingAttachmentInfo.imageLayout = layout;
+    renderingAttachmentInfo.resolveMode = resolveMode;
+    renderingAttachmentInfo.resolveImageView = resolveView;
+    renderingAttachmentInfo.resolveImageLayout = resolveLayout;
+    renderingAttachmentInfo.loadOp = loadOp;
+    renderingAttachmentInfo.storeOp = storeOp;
+    renderingAttachmentInfo.clearValue = clearValue;
+    return renderingAttachmentInfo;
+}
+
+VkFenceCreateInfo vkinit::fence_CI(VkFenceCreateFlags flags) {
+    VkFenceCreateInfo fenceCI { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext =nullptr };
+    fenceCI.flags = flags;
+    return fenceCI;
+}
+
+VkSemaphoreCreateInfo vkinit::semaphore_CI(VkSemaphoreCreateFlags flags) {
+    VkSemaphoreCreateInfo semaphore_CI { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext =nullptr };
+    semaphore_CI.flags = flags;
+    return semaphore_CI;
 }
