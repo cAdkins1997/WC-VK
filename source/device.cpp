@@ -13,6 +13,7 @@ Device::Device() {
     init_sync_objects();
     init_image_views();
     init_allocator();
+    init_descriptors();
 }
 
 Device::~Device() {
@@ -23,7 +24,7 @@ Device::~Device() {
     }
 
     for (auto buffer : buffers) {
-        vmaDestroyBuffer(allocator, buffer.buffer, buffer.allocation);
+        vkDestroyBuffer(device, buffer, nullptr);
     }
 
     for (auto image : images) {
@@ -34,9 +35,15 @@ Device::~Device() {
         vkDestroyShaderModule(device, shader.module, nullptr);
     }
 
-    for (auto frame : frames) {
+    for (auto & frame : frames) {
         vkDestroyCommandPool(device, frame.commandPool, nullptr);
+        vkDestroySemaphore(device, frame.swapchainSemaphore, nullptr);
+        vkDestroySemaphore(device, frame.renderSemaphore, nullptr);
+        vkDestroyFence(device, frame.renderFence, nullptr);
     }
+
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
     vkDestroySwapchainKHR(device, swapchain, nullptr);
     vmaDestroyAllocator(allocator);
@@ -50,24 +57,10 @@ Device::~Device() {
     glfwDestroyWindow(window);
 }
 
-VBuffer Device::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) {
-    VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufferInfo.pNext = nullptr;
-    bufferInfo.size = allocSize;
-    bufferInfo.usage = usage;
-
-    VmaAllocationCreateInfo vmaallocInfo = {};
-    vmaallocInfo.usage = memoryUsage;
-    vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-    Buffer buffer{};
-
-    VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &vmaallocInfo, &buffer.buffer, &buffer.allocation, &buffer.info));
-    buffers.push_back(buffer);
-
-    return &buffers[buffers.size()];
+BufferHandle Device::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) {
 }
 
-VImage Device::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped) {
+TextureHandle Device::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped) {
     Image image{};
     image.imageFormat = format;
     image.imageExtent = size;
@@ -82,8 +75,6 @@ VImage Device::create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags 
     vmaAI.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CHECK(vmaCreateImage(allocator, &imageCI, &vmaAI, &image.image, &image.allocation, nullptr));
 
-    images.push_back(image);
-    return &images[images.size()];
 }
 
 VShader Device::create_shader(const char *filePath) {
@@ -120,11 +111,11 @@ void Device::submit_graphics_work(GraphicsContext &context) {
     VkCommandBuffer cmd = context.commandBuffer;
     VkCommandBufferSubmitInfo commandBufferSI = vkinit::command_buffer_SI(cmd);
 
-    auto& [commandPool, commandBuffer, swapchainSemaphore, renderSemaphore, renderFence] = get_current_frame();
-    VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_SI(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, swapchainSemaphore);
-    VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_SI(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, renderSemaphore);
+    FrameData& currentFrame = get_current_frame();
+    VkSemaphoreSubmitInfo waitInfo = vkinit::semaphore_SI(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, currentFrame.swapchainSemaphore);
+    VkSemaphoreSubmitInfo signalInfo = vkinit::semaphore_SI(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, currentFrame.renderSemaphore);
     VkSubmitInfo2 submitInfo = vkinit::submit_info(&commandBufferSI, &signalInfo, &waitInfo);
-    vkQueueSubmit2(graphicsQueue, 1, &submitInfo, renderFence);
+    vkQueueSubmit2(graphicsQueue, 1, &submitInfo, currentFrame.renderFence);
 }
 
 void Device::submit_compute_work(ComputeContext &context) {
@@ -151,6 +142,45 @@ void Device::present() {
     presentInfo.pWaitSemaphores = &currentFrame.renderSemaphore;
     presentInfo.pImageIndices = &swapchainImageIndex;
     vkQueuePresentKHR(graphicsQueue, &presentInfo);
+    frameNumber++;
+}
+
+TextureHandle Device::store_texture(VkImageView imageView, VkSampler sampler) {
+    size_t handle = texturesToUpdate.size();
+    textures.push_back(imageView);
+
+    VkDescriptorImageInfo imageInfo = vkinit::ds_image_info(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageView, sampler);
+
+    VkWriteDescriptorSet write = vkinit::write_ds(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, TextureBinding, descriptorSet, 1, handle);
+    write.pImageInfo = &imageInfo;
+    vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+    return static_cast<TextureHandle>(handle);
+}
+
+BufferHandle Device::store_buffer(VkBuffer buffer, VkBufferUsageFlagBits usage) {
+    size_t handle = buffers.size();
+    buffers.push_back(buffer);
+
+    std::array<VkWriteDescriptorSet, 2> writes{};
+    for (auto& write : writes) {
+        VkDescriptorBufferInfo bufferInfo = vkinit::ds_buffer_info(buffer, 0, VK_WHOLE_SIZE);
+        write = vkinit::write_ds(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0, descriptorSet, 1, handle);
+    }
+
+    size_t index = 0;
+    if ((usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) == VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+        writes.at(index).dstBinding = UniformBinding;
+        writes.at(index).descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    }
+
+    if ((usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) == VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+        writes.at(index).dstBinding = StorageBinding;
+        writes.at(index).descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    }
+
+    vkUpdateDescriptorSets(device, index, writes.data(), 0, nullptr);
+
+    return static_cast<BufferHandle>(handle);
 }
 
 void Device::init_window() {
@@ -250,9 +280,13 @@ void Device::init_logical_device() {
     descIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = true;
     descIndexingFeatures.pNext = &deviceBufferAddressFeatures;
 
+    VkPhysicalDeviceSynchronization2Features sync2Features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
+    sync2Features.pNext = &descIndexingFeatures;
+
 
     VkPhysicalDeviceFeatures2 deviceFeatures2{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    deviceFeatures2.pNext = &descIndexingFeatures;
+    deviceFeatures2.pNext = &sync2Features;
+    vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
 
     VkDeviceCreateInfo deviceCI { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     deviceCI.pQueueCreateInfos = queueCreateInfos.data();
@@ -260,7 +294,7 @@ void Device::init_logical_device() {
     deviceCI.pEnabledFeatures = nullptr;
     deviceCI.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCI.ppEnabledExtensionNames = deviceExtensions.data();
-    deviceCI.pNext = &deviceFeatures2;
+    deviceCI.pNext = &deviceFeatures2;\
 
     if (enableValidationLayers) {
         deviceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -292,7 +326,7 @@ void Device::init_swapchain() {
     }
 
     VkSwapchainCreateInfoKHR swapchainCI =
-        vkinit::swapchain_CI(surface, imageCount, surfaceFormat, extent, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        vkinit::swapchain_CI(surface, imageCount, surfaceFormat, extent, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
     QueueFamilyIndices indices = find_queue_families(physicalDevice);
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -323,10 +357,10 @@ void Device::init_swapchain() {
 void Device::init_commands() {
     VkCommandPoolCreateInfo commandPoolCI =
         vkinit::command_pool_CI(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, graphicsQueueIndex);
-    for (auto frame : frames) {
-        vkCreateCommandPool(device, &commandPoolCI, nullptr, &frame.commandPool);
-        VkCommandBufferAllocateInfo commandBufferAI = vkinit::command_buffer_AI(frame.commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-        vkAllocateCommandBuffers(device, &commandBufferAI, &frame.commandBuffer);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkCreateCommandPool(device, &commandPoolCI, nullptr, &frames[i].commandPool);
+        VkCommandBufferAllocateInfo commandBufferAI = vkinit::command_buffer_AI(frames[i].commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+        vkAllocateCommandBuffers(device, &commandBufferAI, &frames[i].commandBuffer);
     }
 }
 
@@ -334,10 +368,10 @@ void Device::init_sync_objects() {
     VkFenceCreateInfo fenceCI = vkinit::fence_CI(VK_FENCE_CREATE_SIGNALED_BIT);
     VkSemaphoreCreateInfo semaphoreCI = vkinit::semaphore_CI(0);
 
-    for (auto [commandPool, commandBuffer, swapchainSemaphore, renderSemaphore, renderFence] : frames) {
-        vkCreateFence(device, &fenceCI, nullptr, &renderFence);
-        vkCreateSemaphore(device, &semaphoreCI, nullptr, &swapchainSemaphore);
-        vkCreateSemaphore(device, &semaphoreCI, nullptr, &renderSemaphore);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkCreateFence(device, &fenceCI, nullptr, &frames[i].renderFence);
+        vkCreateSemaphore(device, &semaphoreCI, nullptr, &frames[i].swapchainSemaphore);
+        vkCreateSemaphore(device, &semaphoreCI, nullptr, &frames[i].renderSemaphore);
     }
 }
 
@@ -366,6 +400,11 @@ void Device::init_allocator() {
     allocatorInfo.instance = instance;
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &allocator);
+}
+
+void Device::init_descriptors() {
+    descriptors::DescriptorSetBuilder builder;
+    builder.build(device, descriptorSetLayout, descriptorPool, descriptorSet);
 }
 
 bool Device::check_validation_layer_support() {
@@ -448,6 +487,13 @@ uint32_t Device::rate_device_suitability(VkPhysicalDevice device) {
 
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    VkPhysicalDeviceVulkan12Features features12 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    VkPhysicalDeviceVulkan13Features features13 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    features13.pNext = &features12;
+
+    VkPhysicalDeviceFeatures2 features2 { .sType =  VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext =  &features13 };
+    vkGetPhysicalDeviceFeatures2(device, &features2);
 
     uint32_t score = 0;
     if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {

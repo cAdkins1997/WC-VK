@@ -83,6 +83,11 @@ namespace vkinit {
     VkFenceCreateInfo fence_CI(VkFenceCreateFlags flags);
 
     VkSemaphoreCreateInfo semaphore_CI(VkSemaphoreCreateFlags flags);
+
+    VkDescriptorImageInfo ds_image_info(VkImageLayout layout, VkImageView imageView, VkSampler sampler);
+    VkWriteDescriptorSet write_ds(VkDescriptorType type, uint32_t dstBinding, VkDescriptorSet dstSet, uint32_t count, uint32_t dstArrayElement);
+
+    VkDescriptorBufferInfo ds_buffer_info(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
 }
 
 #endif //VKINIT_H

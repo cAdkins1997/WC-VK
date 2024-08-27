@@ -233,3 +233,35 @@ VkSemaphoreCreateInfo vkinit::semaphore_CI(VkSemaphoreCreateFlags flags) {
     semaphore_CI.flags = flags;
     return semaphore_CI;
 }
+
+VkDescriptorImageInfo vkinit::ds_image_info(VkImageLayout layout, VkImageView imageView, VkSampler sampler) {
+    VkDescriptorImageInfo imageInfo {};
+    imageInfo.imageLayout = layout;
+    imageInfo.imageView = imageView;
+    imageInfo.sampler = sampler;
+    return imageInfo;
+}
+
+VkWriteDescriptorSet vkinit::write_ds(
+    VkDescriptorType type,
+    uint32_t dstBinding,
+    VkDescriptorSet dstSet,
+    uint32_t count,
+    uint32_t dstArrayElement)
+{
+    VkWriteDescriptorSet writeSet{};
+    writeSet.descriptorType = type;
+    writeSet.dstBinding = dstBinding;
+    writeSet.dstSet = dstSet;
+    writeSet.descriptorCount = count;
+    writeSet.dstArrayElement = dstArrayElement;
+    return writeSet;
+}
+
+VkDescriptorBufferInfo vkinit::ds_buffer_info(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range) {
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = buffer;
+    bufferInfo.offset = offset;
+    bufferInfo.range = range;
+    return bufferInfo;
+}

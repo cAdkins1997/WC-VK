@@ -2,7 +2,7 @@
 #ifndef DESCRIPTORS_H
 #define DESCRIPTORS_H
 
-#include "../device.h"
+#include "../vkinit.h"
 #include <array>
 
 enum class TextureHandle : uint32_t { Invalid = 0 };
@@ -37,8 +37,6 @@ namespace descriptors {
         static constexpr uint32_t MAX_BINDLESS_RES = 196608;
 
     private:
-        Device deivce;
-
         void build_layout(VkDevice device, VkDescriptorSetLayout& dsLayout);
         void build_pool(VkDevice device, VkDescriptorPool& dsPool);
     };

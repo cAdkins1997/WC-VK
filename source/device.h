@@ -12,6 +12,7 @@
 
 #include "vkinit.h"
 #include "context.h"
+#include "pipelines/descriptors.h"
 
 #ifdef NDEBUG
     static constexpr bool enableValidationLayers = false;
@@ -68,8 +69,8 @@ public:
     Device();
     ~Device();
 
-    VBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
-    VImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped);
+    BufferHandle create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+    TextureHandle create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped);
     VShader create_shader(const char* filePath);
     VPipeline create_pipeline(VkPipelineCreateFlagBits type);
 
@@ -84,7 +85,6 @@ public:
 public:
     FrameData& get_current_frame() { return frames[frameNumber % MAX_FRAMES_IN_FLIGHT]; };
     uint32_t get_swapchain_image_index() {
-        uint32_t swapchainImageIndex;
         vkAcquireNextImageKHR(device, swapchain, 1000000000, get_current_frame().swapchainSemaphore, nullptr, &swapchainImageIndex);
         return swapchainImageIndex;
     }
@@ -96,7 +96,7 @@ private:
     uint32_t swapchainImageIndex = 0;
     FrameData frames[MAX_FRAMES_IN_FLIGHT];
 
-    std::vector<Buffer> buffers;
+    //std::vector<Buffer> buffers;
     std::vector<Image> images;
     std::vector<Shader> shaders;
     std::vector<Pipeline> pipelines;
@@ -117,6 +117,20 @@ public:
     VkExtent2D swapChainExtent{};
     std::vector<VkImageView> swapChainImageViews{};
     const uint32_t width = 1920, height = 1080;
+
+private:
+    VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+    VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+
+    std::vector<VkImageView> textures;
+    std::vector<VkBuffer> buffers;
+
+    std::vector<TextureHandle> texturesToUpdate;
+    std::vector<BufferHandle> buffersToUpdate;
+
+    TextureHandle store_texture(VkImageView, VkSampler sampler);
+    BufferHandle store_buffer(VkBuffer buffer, VkBufferUsageFlagBits usage);
 
 private:
     struct QueueFamilyIndices {
@@ -154,6 +168,7 @@ private:
     void init_sync_objects();
     void init_image_views();
     void init_allocator();
+    void init_descriptors();
 
     struct SwapChainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;
@@ -161,8 +176,9 @@ private:
         std::vector<VkPresentModeKHR> presentModes;
     };
 
-    const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
     };
 
     const std::vector<const char*> validationLayers = {
