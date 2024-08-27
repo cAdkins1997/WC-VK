@@ -29,6 +29,18 @@ namespace vkinit {
 
     VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
 
+    struct SamplerAddressModes {
+        VkSamplerAddressMode addressModeU, addressModeV, addressModeW;
+    };
+
+    VkSamplerCreateInfo sampler_CI(
+        VkSamplerCreateFlags flags,
+        VkFilter minFilter,
+        VkFilter magFilter,
+        SamplerAddressModes addressModes,
+        VkSamplerMipmapMode mipmapMode
+        );
+
 
     VkImageSubresourceRange subresource_range(
         VkImageAspectFlags imageAspectFlags,

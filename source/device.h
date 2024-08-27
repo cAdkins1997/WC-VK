@@ -129,7 +129,7 @@ private:
     std::vector<TextureHandle> texturesToUpdate;
     std::vector<BufferHandle> buffersToUpdate;
 
-    TextureHandle store_texture(VkImageView, VkSampler sampler);
+    TextureHandle store_texture(VkImageView imageView, VkSampler sampler);
     BufferHandle store_buffer(VkBuffer buffer, VkBufferUsageFlagBits usage);
 
 private:

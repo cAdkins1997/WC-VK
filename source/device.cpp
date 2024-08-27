@@ -75,6 +75,37 @@ TextureHandle Device::create_image(VkExtent3D size, VkFormat format, VkImageUsag
     vmaAI.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CHECK(vmaCreateImage(allocator, &imageCI, &vmaAI, &image.image, &image.allocation, nullptr));
 
+    VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+    if (format == VK_FORMAT_D32_SFLOAT) {
+        aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    VkComponentMapping components = {
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY
+    };
+
+    VkImageView imageView{};
+    VkImageSubresourceRange subresourceRange = vkinit::subresource_range(VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1);
+    VkImageViewCreateInfo imageViewInfo = vkinit::image_view_CI(image.image, VK_IMAGE_VIEW_TYPE_2D, format, components, subresourceRange);
+    vkCreateImageView(device, &imageViewInfo, nullptr, &imageView);
+
+    VkSampler sampler;
+    vkinit::SamplerAddressModes addressModes {
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE };
+    VkSamplerCreateInfo sampler_CI =
+        vkinit::sampler_CI(VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT,
+            VK_FILTER_NEAREST,
+            VK_FILTER_NEAREST,
+            addressModes,
+            VK_SAMPLER_MIPMAP_MODE_NEAREST);
+    vkCreateSampler(device, &sampler_CI, nullptr, &sampler);
+
+    return store_texture(imageView, sampler);
 }
 
 VShader Device::create_shader(const char *filePath) {

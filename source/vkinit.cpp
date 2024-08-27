@@ -68,6 +68,33 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags u
     return info;
 }
 
+VkSamplerCreateInfo vkinit::sampler_CI(
+    VkSamplerCreateFlags flags,
+    VkFilter minFilter,
+    VkFilter magFilter,
+    SamplerAddressModes addressModes,
+    VkSamplerMipmapMode mipmapMode)
+{
+    VkSamplerCreateInfo sampler_CI { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, .pNext = nullptr };
+    sampler_CI.flags = flags;
+    sampler_CI.minFilter = minFilter;
+    sampler_CI.magFilter = magFilter;
+    sampler_CI.addressModeU = addressModes.addressModeU;
+    sampler_CI.addressModeV = addressModes.addressModeV;
+    sampler_CI.addressModeW = addressModes.addressModeW;
+    sampler_CI.mipmapMode = mipmapMode;
+    sampler_CI.mipLodBias = VK_REMAINING_MIP_LEVELS;
+    sampler_CI.anisotropyEnable = VK_FALSE;
+    sampler_CI.maxAnisotropy = 0;
+    sampler_CI.compareEnable = VK_TRUE;
+    sampler_CI.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_CI.minLod = VK_LOD_CLAMP_NONE;
+    sampler_CI.maxLod = VK_LOD_CLAMP_NONE;
+    sampler_CI.borderColor = VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+    sampler_CI.unnormalizedCoordinates = VK_FALSE;
+    return sampler_CI;
+}
+
 VkImageSubresourceRange vkinit::subresource_range(
     VkImageAspectFlags imageAspectFlags,
     uint32_t baseMipLevel,
