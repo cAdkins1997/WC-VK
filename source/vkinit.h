@@ -64,6 +64,12 @@ namespace vkinit {
         const VkDescriptorPoolSize* pPoolSizes
         );
 
+    VkDescriptorSetLayoutBinding ds_layout_binding(
+        uint32_t _binding,
+        VkDescriptorType dsType,
+        VkPipelineStageFlags stageFlags,
+        uint32_t dsCount);
+
     VkDescriptorSetAllocateInfo ds_ai(VkDescriptorPool ds, uint32_t count);
 
     VkCommandPoolCreateInfo command_pool_CI(VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex);
@@ -99,7 +105,7 @@ namespace vkinit {
     VkDescriptorImageInfo ds_image_info(VkImageLayout layout, VkImageView imageView, VkSampler sampler);
     VkWriteDescriptorSet write_ds(VkDescriptorType type, uint32_t dstBinding, VkDescriptorSet dstSet, uint32_t count, uint32_t dstArrayElement);
 
-    VkDescriptorBufferInfo ds_buffer_info(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
+    VkDescriptorBufferInfo ds_buffer_info(VkBuffer& buffer, VkDeviceSize offset, VkDeviceSize range);
 }
 
 #endif //VKINIT_H

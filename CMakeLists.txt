@@ -17,9 +17,14 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/pipelines/graphicspipelines.h
         source/pipelines/shaders.cpp
         source/pipelines/shaders.h
-        source/device.cpp
-        source/device.h
-        source/vkcommon.cpp)
+        source/device/device.cpp
+        source/device/device.h
+        source/vkcommon.cpp
+        source/device/InstanceHelper.cpp
+        source/device/InstanceHelper.h
+        source/device/DeviceHelper.cpp
+        source/device/DeviceHelper.h
+        source/device/resources.h)
 
 if (WIN32)
 

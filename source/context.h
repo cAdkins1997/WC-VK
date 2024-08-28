@@ -1,7 +1,7 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include "device.h"
+#include "device/device.h"
 
 struct Pipeline;
 struct Buffer;

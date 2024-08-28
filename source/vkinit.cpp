@@ -83,7 +83,7 @@ VkSamplerCreateInfo vkinit::sampler_CI(
     sampler_CI.addressModeV = addressModes.addressModeV;
     sampler_CI.addressModeW = addressModes.addressModeW;
     sampler_CI.mipmapMode = mipmapMode;
-    sampler_CI.mipLodBias = VK_REMAINING_MIP_LEVELS;
+    sampler_CI.mipLodBias = 0;
     sampler_CI.anisotropyEnable = VK_FALSE;
     sampler_CI.maxAnisotropy = 0;
     sampler_CI.compareEnable = VK_TRUE;
@@ -137,6 +137,20 @@ VkDescriptorPoolCreateInfo vkinit::ds_pool_CI(
     dsPoolCI.poolSizeCount = poolSizeCount;
     dsPoolCI.pPoolSizes = pPoolSizes;
     return dsPoolCI;
+}
+
+VkDescriptorSetLayoutBinding vkinit::ds_layout_binding(
+    uint32_t _binding,
+    VkDescriptorType dsType,
+    VkPipelineStageFlags stageFlags,
+    uint32_t dsCount)
+{
+    VkDescriptorSetLayoutBinding binding{};
+    binding.descriptorType = dsType;
+    binding.stageFlags = stageFlags;
+    binding.descriptorCount = dsCount;
+    binding.binding = _binding;
+    return binding;
 }
 
 VkDescriptorSetAllocateInfo vkinit::ds_ai(VkDescriptorPool ds, uint32_t count) {
@@ -276,7 +290,7 @@ VkWriteDescriptorSet vkinit::write_ds(
     uint32_t count,
     uint32_t dstArrayElement)
 {
-    VkWriteDescriptorSet writeSet{};
+    VkWriteDescriptorSet writeSet{ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .pNext = nullptr };
     writeSet.descriptorType = type;
     writeSet.dstBinding = dstBinding;
     writeSet.dstSet = dstSet;
@@ -285,7 +299,7 @@ VkWriteDescriptorSet vkinit::write_ds(
     return writeSet;
 }
 
-VkDescriptorBufferInfo vkinit::ds_buffer_info(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range) {
+VkDescriptorBufferInfo vkinit::ds_buffer_info(VkBuffer& buffer, VkDeviceSize offset, VkDeviceSize range) {
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = buffer;
     bufferInfo.offset = offset;

@@ -2,7 +2,7 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include "device.h"
+#include "device/device.h"
 #include "context.h"
 
 #include "pipelines/descriptors.h"
@@ -14,9 +14,6 @@ public:
 
     void run();
     void draw();
-
-private:
-    void init_descriptors();
 
 private:
     Device device;

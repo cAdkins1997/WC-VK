@@ -10,8 +10,8 @@ Application::~Application() {
 }
 
 void Application::run() {
-    VShader shader = device.create_shader("../shaders/test.comp.spv");
-    TextureHandle texture = device.create_image({1920, 1080, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
+    //VShader shader = device.create_shader("../shaders/test.comp.spv");
+    //TextureHandle texture = device.create_image({1920, 1080, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
     while (!glfwWindowShouldClose(device.window)) {
         draw();
         glfwPollEvents();
@@ -42,8 +42,4 @@ void Application::draw() {
     graphicsContext.end();
     device.submit_graphics_work(graphicsContext);
     device.present();
-}
-
-void Application::init_descriptors() {
-
 }
