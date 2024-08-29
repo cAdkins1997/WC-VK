@@ -24,7 +24,8 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/device/InstanceHelper.h
         source/device/DeviceHelper.cpp
         source/device/DeviceHelper.h
-        source/device/resources.h)
+        source/device/resources.h
+        source/meshes/mesh.h)
 
 if (WIN32)
 
@@ -87,9 +88,16 @@ elseif (UNIX AND NOT APPLE)
     set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     add_subdirectory(include/glfw-3.4)
 
+    add_subdirectory(include/fastgltf-0.8.0)
+
     find_package(vk-bootstrap CONFIG REQUIRED HINTS "${VCPK_ROOT}/vcpkg/packages/vk-bootstrap_x64-linux")
 
-    target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan glfw vk-bootstrap::vk-bootstrap vk-bootstrap::vk-bootstrap-compiler-warnings)
+    target_link_libraries(${PROJECT_NAME}
+            Vulkan::Vulkan
+            glfw
+            vk-bootstrap::vk-bootstrap vk-bootstrap::vk-bootstrap-compiler-warnings
+            fastgltf::fastgltf
+    )
 
     set(GLSL_VALIDATOR "/${VULKAN_SDK}bin/glslangValidator")
 

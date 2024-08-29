@@ -43,3 +43,10 @@ void Application::draw() {
     device.submit_graphics_work(graphicsContext);
     device.present();
 }
+
+void Application::init_descriptors() {
+
+    using namespace descriptors;
+    size_t minUniformBufferOffsetAlignment = device.get_min_uniform_buffer_offset_alignment();
+    BindlessParams bindlessParams(minUniformBufferOffsetAlignment);
+}

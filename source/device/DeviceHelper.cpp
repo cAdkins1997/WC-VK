@@ -92,16 +92,10 @@ void DeviceHelper::init_logical_device() {
     descIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = true;
     descIndexingFeatures.pNext = &deviceBufferAddressFeatures;
 
-    VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
-    rayQueryFeatures.rayQuery = true;
-    rayQueryFeatures.pNext = &descIndexingFeatures;
-
     VkPhysicalDeviceSynchronization2Features sync2Features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
-    sync2Features.synchronization2 = VK_TRUE;
-    sync2Features.pNext = &rayQueryFeatures;
+    sync2Features.pNext = &descIndexingFeatures;
 
     VkPhysicalDeviceTimelineSemaphoreFeatures semaphoreFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES };
-    semaphoreFeatures.timelineSemaphore = VK_FALSE;
     semaphoreFeatures.pNext = &sync2Features;
 
     VkPhysicalDeviceFeatures2 deviceFeatures2{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };

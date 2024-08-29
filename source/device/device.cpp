@@ -40,6 +40,7 @@ Device::~Device() {
     vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
     vmaDestroyAllocator(allocator);
+    vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -240,11 +241,9 @@ void Device::init_descriptors() {
     size_t minUniformBufferOffsetAlignment = get_min_uniform_buffer_offset_alignment();
     BindlessParams bindlessParams(minUniformBufferOffsetAlignment);
 
-    auto rangePBR = bindlessParams.add_range(PBRParams({meshTransformsBuffer, pointLightsBuffer, cameraBuffer });
+    /*auto rangePBR = bindlessParams.add_range(PBRParams({meshTransformsBuffer, pointLightsBuffer, cameraBuffer });
     auto rangeSkybox = bindlessParams.add_range(SkyBoxParams({cameraBuffer, skyboxTexture});
 
     bindlessParams.build(device, allocator, descriptorPool);
-    vkCmdBindDescriptorSets()
+    vkCmdBindDescriptorSets()*/
 }
-
-

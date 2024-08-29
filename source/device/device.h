@@ -78,8 +78,10 @@ public:
     std::vector<VkImage> swapchainImages{};
     std::vector<VkImageView> swapChainImageViews{};
 
-private:
+public:
     [[nodiscard]] uint32_t get_min_uniform_buffer_offset_alignment() const;
+
+private:
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;

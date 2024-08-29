@@ -14,6 +14,7 @@ public:
 
     void run();
     void draw();
+    void init_descriptors();
 
 private:
     Device device;
