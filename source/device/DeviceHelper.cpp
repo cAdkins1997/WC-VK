@@ -10,14 +10,14 @@ DeviceHelper::DeviceHelper(InstanceHelper& instanceHelper)
     init_swapchain();
 }
 
-DeviceHelper::~DeviceHelper() {
-}
+DeviceHelper::~DeviceHelper() = default;
 
-void DeviceHelper::assign_queue_family_indices(uint32_t &graphics, uint32_t &compute, uint32_t &present) const {
+void DeviceHelper::assign_queue_family_indices(uint32_t &graphics, uint32_t &compute, uint32_t &present, uint32_t &transfer) const {
     if (QueueFamilyIndices indices = find_queue_families(physicalDevice); indices.isComplete()) {
         graphics = indices.graphicsFamily.value();
         compute = indices.computeFamily.value();
         present = indices.presentFamily.value();
+        transfer = indices.transferFamily.value();
     }
 }
 
@@ -79,28 +79,39 @@ void DeviceHelper::init_logical_device() {
     }
 
     VkPhysicalDeviceBufferDeviceAddressFeatures deviceBufferAddressFeatures{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES };
-    deviceBufferAddressFeatures.bufferDeviceAddress = true;
 
-    VkPhysicalDeviceDescriptorIndexingFeatures descIndexingFeatures{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
-    descIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = true;
-    descIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = true;
-    descIndexingFeatures.descriptorBindingPartiallyBound = true;
-    descIndexingFeatures.runtimeDescriptorArray = true;
-    descIndexingFeatures.shaderUniformBufferArrayNonUniformIndexing = true;
-    descIndexingFeatures.descriptorBindingUniformBufferUpdateAfterBind = true;
-    descIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = true;
-    descIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = true;
+    VkPhysicalDeviceDescriptorIndexingFeatures descIndexingFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
     descIndexingFeatures.pNext = &deviceBufferAddressFeatures;
 
-    VkPhysicalDeviceSynchronization2Features sync2Features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
+    VkPhysicalDeviceSynchronization2Features sync2Features { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
     sync2Features.pNext = &descIndexingFeatures;
 
     VkPhysicalDeviceTimelineSemaphoreFeatures semaphoreFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES };
     semaphoreFeatures.pNext = &sync2Features;
 
-    VkPhysicalDeviceFeatures2 deviceFeatures2{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    deviceFeatures2.pNext = &semaphoreFeatures;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+    rtPipelineFeatures.pNext = &semaphoreFeatures;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelStructFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    accelStructFeatures.pNext = &rtPipelineFeatures;
+
+    VkPhysicalDeviceRayQueryFeaturesKHR raytracingFeatures { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+    raytracingFeatures.pNext = &accelStructFeatures;
+
+    VkPhysicalDeviceFeatures2 deviceFeatures2 { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+    deviceFeatures2.pNext = &raytracingFeatures;
     vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
+
+    if (raytracingFeatures.rayQuery == VK_TRUE && rtPipelineFeatures.rayTracingPipeline == VK_TRUE) {
+        deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+        std::cout << "Raytracing supported\n";
+    }
+    else {
+        std::cout << "No raytracing support\n";
+    }
 
     VkDeviceCreateInfo deviceCI { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     deviceCI.pQueueCreateInfos = queueCreateInfos.data();
@@ -124,6 +135,7 @@ void DeviceHelper::init_logical_device() {
     vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
     vkGetDeviceQueue(device, indices.computeFamily.value(), 0, &computeQueue);
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(device, indices.transferFamily.value(), 0, &transferQueue);
 }
 
 void DeviceHelper::init_window() {
@@ -255,7 +267,7 @@ uint32_t DeviceHelper::rate_device_suitability(VkPhysicalDevice device) {
     score += deviceProperties.limits.maxImageDimension2D;
 
     QueueFamilyIndices indices = find_queue_families(device);
-    if (indices.graphicsFamily.has_value() && indices.presentFamily.has_value() && indices.computeFamily.has_value()) {
+    if (indices.isComplete()) {
         score += 1000;
     }
 
@@ -286,6 +298,10 @@ DeviceHelper::QueueFamilyIndices DeviceHelper::find_queue_families(VkPhysicalDev
 
         if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
             indices.computeFamily = i;
+        }
+
+        if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            indices.transferFamily = i;
         }
 
         VkBool32 presentSupport = false;

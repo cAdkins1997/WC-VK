@@ -14,11 +14,16 @@ public:
 
     void run();
     void draw();
-    void init_descriptors();
-
 private:
+
+    void immediate_reset() const;
+    void init_immediate_commands();
+
     Device device;
-    Buffer buffer;
+
+    VkCommandPool immediateCommandPool = VK_NULL_HANDLE;
+    VkCommandBuffer immediateCommandBuffer = VK_NULL_HANDLE;
+    VkFence immediateFence = VK_NULL_HANDLE;
 };
 
 

@@ -7,6 +7,8 @@ struct Pipeline;
 struct Buffer;
 struct Image;
 
+class Device;
+
 struct GraphicsContext {
     explicit GraphicsContext(VkCommandBuffer _commandBuffer);
 
@@ -20,6 +22,8 @@ struct GraphicsContext {
         VkPipelineStageFlags2 srcStageFlags, VkAccessFlags2 srcAccessMask,
         VkPipelineStageFlags2 dstStageFlags, VkAccessFlags2 dstAccessMask);
     void image_barrier(VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
+    void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
+
     void draw();
 
     void set_pipeline(Pipeline pipeline);
@@ -45,12 +49,17 @@ struct RaytracingContext {
 };
 
 struct UploadContext {
+    UploadContext(VkCommandBuffer _commandBuffer, Device& _device);
+
     void begin();
     void end();
     void resource_barrier();
 
-    void upload_buffer(Buffer);
+    VkDeviceAddress upload_buffer(Buffer& buffer, size_t size);
     void upload_texture(Image);
+
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+    Device& device;
 };
 
 #endif

@@ -192,6 +192,15 @@ VkCommandBufferSubmitInfo vkinit::command_buffer_SI(VkCommandBuffer commandBuffe
     return submitInfo;
 }
 
+VkSemaphoreWaitInfo vkinit::wait_info(VkSemaphoreWaitFlags flags, uint32_t count, const VkSemaphore* pSemaphores, const uint64_t* pValues) {
+    VkSemaphoreWaitInfo waitInfo { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, .pNext = nullptr };
+    waitInfo.flags = flags;
+    waitInfo.semaphoreCount = count;
+    waitInfo.pSemaphores = pSemaphores;
+    waitInfo.pValues = pValues;
+    return waitInfo;
+}
+
 VkSubmitInfo2 vkinit::submit_info(
     VkCommandBufferSubmitInfo *cmd,
     VkSemaphoreSubmitInfo *signalSemaphoreInfo,

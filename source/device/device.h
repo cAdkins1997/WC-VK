@@ -42,7 +42,7 @@ public:
     void submit_graphics_work(GraphicsContext& context);
     void submit_compute_work(ComputeContext& context);
     void submit_raytracing_work(RaytracingContext& context);
-    void submit_upload_work(UploadContext& context);
+    void submit_upload_work(UploadContext &context, VkFence& fence);
 
     void wait_on_work();
     void present();
@@ -56,6 +56,7 @@ public:
 
 public:
     uint32_t frameNumber = 0;
+    uint32_t width, height;
 
 private:
     uint32_t swapchainImageIndex = 0;
@@ -78,6 +79,9 @@ public:
     std::vector<VkImage> swapchainImages{};
     std::vector<VkImageView> swapChainImageViews{};
 
+    Image drawImage;
+    Image depthImage;
+
 public:
     [[nodiscard]] uint32_t get_min_uniform_buffer_offset_alignment() const;
 
@@ -93,10 +97,11 @@ private:
     BufferHandle store_buffer(VkBuffer buffer, VkBufferUsageFlagBits usage);
 
 public:
-    uint32_t graphicsQueueIndex = 0, computeQueueIndex = 0, presentQueueIndex = 0;
+    uint32_t graphicsQueueIndex = 0, computeQueueIndex = 0, presentQueueIndex = 0, transferQueueIndex = 0;
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue computeQueue = VK_NULL_HANDLE;
     VkQueue presentQueue = VK_NULL_HANDLE;
+    VkQueue transferQueue = VK_NULL_HANDLE;
 
 public:
     VmaAllocator allocator{};
@@ -106,6 +111,7 @@ public:
     Device& operator=(const Device&) = delete;
 
 private:
+    void init_present_images();
     void init_commands();
     void init_sync_objects();
     void init_allocator();

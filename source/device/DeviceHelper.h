@@ -4,6 +4,7 @@
 
 #include <set>
 #include <map>
+#include <cassert>
 
 #include "InstanceHelper.h"
 #include "../vkinit.h"
@@ -13,7 +14,7 @@ public:
     explicit DeviceHelper(InstanceHelper& instanceHelper);
     ~DeviceHelper();
 
-    void assign_queue_family_indices(uint32_t& graphics, uint32_t& compute, uint32_t& present) const;
+    void assign_queue_family_indices(uint32_t& graphics, uint32_t& compute, uint32_t& present, uint32_t &transfer) const;
 
     InstanceHelper& instanceHelper;
 
@@ -24,6 +25,7 @@ public:
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue computeQueue = VK_NULL_HANDLE;
     VkQueue presentQueue = VK_NULL_HANDLE;
+    VkQueue transferQueue = VK_NULL_HANDLE;
 
     GLFWwindow* window = nullptr;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -38,9 +40,10 @@ public:
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> computeFamily;
         std::optional<uint32_t> presentFamily;
+        std::optional<uint32_t> transferFamily;
 
         [[nodiscard]] bool isComplete() const {
-            return graphicsFamily.has_value() && computeFamily.has_value() && presentFamily.has_value();
+            return graphicsFamily.has_value() && computeFamily.has_value() && presentFamily.has_value() && transferFamily.has_value();
         }
     };
 
@@ -73,6 +76,7 @@ private:
 
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
         VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
     };
 };

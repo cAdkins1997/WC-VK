@@ -3,6 +3,7 @@
 #define RESOURCES_H
 
 #include "../vkcommon.h"
+#include "../pipelines/descriptors.h"
 
 struct FrameData {
     VkCommandPool commandPool = VK_NULL_HANDLE;
@@ -27,6 +28,36 @@ struct Image {
     VkFormat imageFormat;
     VkSampler sampler;
     size_t handle;
+};
+
+struct Vertex {
+    glm::vec3 position;
+    float uv_x;
+    glm::vec3 normal;
+    float uv_y;
+    glm::vec4 color;
+};
+
+struct Surface {
+    uint32_t startIndex{};
+    uint32_t count{};
+};
+
+struct Mesh {
+    std::string name{};
+    std::vector<Surface> surfaces;
+};
+
+
+struct MeshBuffer {
+    BufferHandle indexBuffer;
+    BufferHandle vertexBuffer;
+    VkDeviceAddress vertexBufferAddress;
+};
+
+struct PushConstants {
+    glm::mat4 worldMatrix;
+    VkDeviceAddress vertexBuffer;
 };
 
 struct Shader {

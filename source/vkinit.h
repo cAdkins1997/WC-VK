@@ -76,6 +76,8 @@ namespace vkinit {
     VkCommandBufferAllocateInfo command_buffer_AI(VkCommandPool commandPool, VkCommandBufferLevel level, uint32_t count);
     VkCommandBufferBeginInfo command_buffer_BI(VkCommandBufferUsageFlags usageFlags);
     VkCommandBufferSubmitInfo command_buffer_SI(VkCommandBuffer commandBuffer);
+
+    VkSemaphoreWaitInfo wait_info(VkSemaphoreWaitFlags flags, uint32_t count, const VkSemaphore* pSemaphores, const uint64_t* pValues);
     VkSubmitInfo2 submit_info(
         VkCommandBufferSubmitInfo* cmd,
         VkSemaphoreSubmitInfo* signalSemaphoreInfo,

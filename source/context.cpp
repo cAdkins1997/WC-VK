@@ -74,3 +74,90 @@ void GraphicsContext::image_barrier(VkImage image, VkImageLayout currentLayout, 
     dependencyInfo.pImageMemoryBarriers = &imageBarrier;
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 }
+
+void GraphicsContext::copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {
+    VkImageBlit2 blitRegion{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };
+
+    blitRegion.srcOffsets[1].x = srcSize.width;
+    blitRegion.srcOffsets[1].y = srcSize.height;
+    blitRegion.srcOffsets[1].z = 1;
+
+    blitRegion.dstOffsets[1].x = dstSize.width;
+    blitRegion.dstOffsets[1].y = dstSize.height;
+    blitRegion.dstOffsets[1].z = 1;
+
+    blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.srcSubresource.baseArrayLayer = 0;
+    blitRegion.srcSubresource.layerCount = 1;
+    blitRegion.srcSubresource.mipLevel = 0;
+
+    blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.dstSubresource.baseArrayLayer = 0;
+    blitRegion.dstSubresource.layerCount = 1;
+    blitRegion.dstSubresource.mipLevel = 0;
+
+    VkBlitImageInfo2 blitInfo{ .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr };
+    blitInfo.dstImage = dst;
+    blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    blitInfo.srcImage = src;
+    blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    blitInfo.filter = VK_FILTER_LINEAR;
+    blitInfo.regionCount = 1;
+    blitInfo.pRegions = &blitRegion;
+
+    vkCmdBlitImage2(commandBuffer, &blitInfo);
+}
+
+UploadContext::UploadContext(VkCommandBuffer _commandBuffer, Device& _device) :
+commandBuffer(_commandBuffer), device(_device) {}
+
+void UploadContext::begin() {
+    vkResetCommandBuffer(commandBuffer, 0);
+    VkCommandBufferBeginInfo beginInfo = vkinit::command_buffer_BI(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+}
+
+void UploadContext::end() {
+    vkEndCommandBuffer(commandBuffer);
+}
+
+VkDeviceAddress UploadContext::upload_buffer(Buffer& buffer, size_t size) {
+    Buffer stagingBuffer{};
+
+    VkBufferCreateInfo bufferInfo = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferInfo.pNext = nullptr;
+    bufferInfo.size = size;
+
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    VmaAllocationCreateInfo vmaallocInfo = {};
+    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+    vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    vmaCreateBuffer(device.allocator, &bufferInfo, &vmaallocInfo, &stagingBuffer.buffer, &stagingBuffer.allocation, &stagingBuffer.info);
+
+    VkBufferDeviceAddressInfo deviceAddressInfo {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = buffer.buffer
+    };
+
+    VkDeviceAddress deviceAddress = vkGetBufferDeviceAddress(device.device, &deviceAddressInfo);
+
+    void* data = stagingBuffer.allocation;
+
+    memcpy(data, buffer.allocation, size);
+
+    VkBufferCopy copy{0};
+    copy.dstOffset = 0;
+    copy.srcOffset = 0;
+    copy.size = size;
+
+    vkCmdCopyBuffer(commandBuffer, stagingBuffer.buffer, buffer.buffer, 1, &copy);
+
+    vmaDestroyBuffer(device.allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+
+    return deviceAddress;
+}
+
+void UploadContext::upload_texture(Image) {
+}

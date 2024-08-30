@@ -32,16 +32,20 @@ if (WIN32)
 find_package(Vulkan REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/vk-bootstrap_x64-mingw-dynamic")
 find_package(fmt CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fmt_x64-mingw-dynamic")
+find_package(simdjson CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/simdjson_x64-mingw-dynamic")
+find_package(fastgltf CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fastgltf_x64-mingw-dynamic")
+add_subdirectory(include/glfw-3.4)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(include/glfw-3.4)
 
-target_link_libraries(${PROJECT_NAME} glfw
+target_link_libraries(${PROJECT_NAME}
+        glfw
         Vulkan::Vulkan
         vk-bootstrap::vk-bootstrap
         vk-bootstrap::vk-bootstrap-compiler-warnings
+        fastgltf::fastgltf
         fmt::fmt)
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")

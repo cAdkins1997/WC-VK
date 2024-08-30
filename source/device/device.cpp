@@ -12,12 +12,16 @@ Device::Device() : deviceHelper(instanceHelper) {
     graphicsQueue = deviceHelper.graphicsQueue;
     computeQueue = deviceHelper.computeQueue;
     presentQueue = deviceHelper.presentQueue;
-    deviceHelper.assign_queue_family_indices(graphicsQueueIndex, computeQueueIndex, presentQueueIndex);
+    transferQueue = deviceHelper.transferQueue;
+    deviceHelper.assign_queue_family_indices(graphicsQueueIndex, computeQueueIndex, presentQueueIndex, transferQueueIndex);
+    height = deviceHelper.height;
+    width = deviceHelper.width;
 
     init_commands();
     init_sync_objects();
     init_allocator();
     init_descriptors();
+    init_present_images();
 }
 
 Device::~Device() {
@@ -142,8 +146,14 @@ void Device::submit_raytracing_work(RaytracingContext &context) {
 
 }
 
-void Device::submit_upload_work(UploadContext &context) {
+void Device::submit_upload_work(UploadContext &context, VkFence& fence) {
+    auto cmd = context.commandBuffer;
+    auto commandBufferSI = vkinit::command_buffer_SI(cmd);
 
+    FrameData& currentFrame = get_current_frame();
+
+    auto submitInfo = vkinit::submit_info(&commandBufferSI, nullptr, nullptr);
+    vkQueueSubmit2(graphicsQueue, 1, &submitInfo, fence);
 }
 
 void Device::wait_on_work() {
@@ -204,6 +214,39 @@ BufferHandle Device::store_buffer(VkBuffer buffer, VkBufferUsageFlagBits usage) 
     vkUpdateDescriptorSets(device, index, writes.data(), 0, nullptr);
 
     return static_cast<BufferHandle>(handle);
+}
+
+void Device::init_present_images() {
+    VkExtent3D drawImageExtent = { width, height, 1 };
+
+    drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    drawImage.imageExtent = drawImageExtent;
+
+    VkImageUsageFlags drawImageUsages{};
+    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo rimg_info = vkinit::image_create_info(drawImage.imageFormat, drawImageUsages, drawImageExtent);
+
+    VmaAllocationCreateInfo rimg_allocinfo = {};
+    rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    rimg_allocinfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vmaCreateImage(allocator, &rimg_info, &rimg_allocinfo, &drawImage.image, &drawImage.allocation, nullptr);
+
+    VkComponentMapping components {
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY
+    };
+
+    auto subresourceRange = vkinit::subresource_range(VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1);
+    VkImageViewCreateInfo viewInfo = vkinit::image_view_CI(drawImage.image, VK_IMAGE_VIEW_TYPE_2D, drawImage.imageFormat, components, subresourceRange);
+
+    VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &drawImage.imageView));
 }
 
 void Device::init_commands() {
