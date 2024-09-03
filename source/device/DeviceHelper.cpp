@@ -102,7 +102,7 @@ void DeviceHelper::init_logical_device() {
     deviceFeatures2.pNext = &raytracingFeatures;
     vkGetPhysicalDeviceFeatures2(physicalDevice, &deviceFeatures2);
 
-    if (raytracingFeatures.rayQuery == VK_TRUE && rtPipelineFeatures.rayTracingPipeline == VK_TRUE) {
+    /*if (raytracingFeatures.rayQuery == VK_TRUE && rtPipelineFeatures.rayTracingPipeline == VK_TRUE) {
         deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
         deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
         deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
@@ -111,7 +111,7 @@ void DeviceHelper::init_logical_device() {
     }
     else {
         std::cout << "No raytracing support\n";
-    }
+    }*/
 
     VkDeviceCreateInfo deviceCI { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     deviceCI.pQueueCreateInfos = queueCreateInfos.data();
