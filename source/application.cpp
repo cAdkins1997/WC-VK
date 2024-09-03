@@ -44,7 +44,7 @@ void Application::draw() {
     graphicsContext.image_barrier(drawImage, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     graphicsContext.image_barrier(currentSwapchainImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    graphicsContext.copy_image(drawImage, currentSwapchainImage, {1920, 1080}, {1920, 1080});
+    graphicsContext.copy_image(drawImage, currentSwapchainImage, {1280, 720}, {1280, 720});
     graphicsContext.image_barrier(currentSwapchainImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     graphicsContext.end();

@@ -34,7 +34,7 @@ public:
     std::vector<VkImageView> swapChainImageViews{};
     VkFormat swapchainImageFormat{};
     VkExtent2D swapChainExtent{};
-    const uint32_t width = 1920, height = 1080;
+    const uint32_t width = 1280, height = 720;
 
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
