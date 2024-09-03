@@ -1,6 +1,8 @@
 
 #include "application.h"
 
+#include <chrono>
+
 Application::Application() {
     init_immediate_commands();
     run();
@@ -21,6 +23,7 @@ void Application::run() {
 
 void Application::draw() {
     device.wait_on_work();
+
     FrameData& currentFrame = device.get_current_frame();
     uint32_t swapchainImageIndex = device.get_swapchain_image_index();
     VkImage& currentSwapchainImage = device.swapchainImages[swapchainImageIndex];
@@ -32,10 +35,9 @@ void Application::draw() {
     graphicsContext.image_barrier(drawImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     VkClearColorValue clearValue;
-    float redValue = std::abs(std::sin(device.frameNumber / 1000.0f));
-    float greenValue = std::abs(std::cos(device.frameNumber / 1000.0f));
-    float blueValue = std::abs(std::tan(device.frameNumber / 1000.0f));
-    clearValue = { { redValue, greenValue, blueValue, 1.0f } };
+    float redValue = std::abs(std::sin(device.frameNumber / 1000000.0f));
+    float blueValue = std::abs(std::tan(device.frameNumber / 10000.0f));
+    clearValue = { { redValue, 0.1f, blueValue, 1.0f } };
 
     VkImageSubresourceRange clearRange =
             vkinit::subresource_range(VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS);
@@ -49,7 +51,6 @@ void Application::draw() {
 
     graphicsContext.end();
     device.submit_graphics_work(graphicsContext);
-
     device.present();
 }
 
