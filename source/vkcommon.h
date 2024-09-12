@@ -16,4 +16,23 @@
 
 #include <iostream>
 
+#ifdef NDEBUG
+#define VK_CHECK_HPP(x)                         \
+x                                               \
+\
+
+#else
+
+#define VK_CHECK_HPP(x)                         \
+do {                                            \
+auto result = x;                                \
+if (x != vk::Result::eSuccess) {                \
+vk::to_string(result);                          \
+abort();                                        \
+}                                               \
+}                                               \
+while(0);
+#endif
+
+
 #endif //VKCOMMON_H

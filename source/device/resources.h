@@ -3,8 +3,6 @@
 #define RESOURCES_H
 
 #include "../vkcommon.h"
-#include "../pipelines/descriptors.h"
-
 struct FrameData {
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
@@ -48,6 +46,8 @@ struct Mesh {
     std::vector<Surface> surfaces;
 };
 
+enum class TextureHandle : uint32_t { Invalid = 0 };
+enum class BufferHandle : uint32_t { Invalid = 0 };
 
 struct MeshBuffer {
     BufferHandle indexBuffer;

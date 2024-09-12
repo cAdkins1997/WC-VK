@@ -25,7 +25,8 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/device/DeviceHelper.cpp
         source/device/DeviceHelper.h
         source/device/resources.h
-        source/meshes/mesh.h)
+        source/meshes/mesh.h
+        source/device/device.hpp)
 
 if (WIN32)
 

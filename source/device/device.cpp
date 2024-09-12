@@ -1,5 +1,6 @@
 
 #include "device.h"
+#include "device.hpp"
 
 Device::Device() : deviceHelper(instanceHelper) {
     device = deviceHelper.device;
@@ -30,6 +31,8 @@ Device::~Device() {
     for (auto imageView : swapChainImageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }
+
+    vkDestroyImage(device, drawImage.image, nullptr);
 
     vkDestroySwapchainKHR(device, swapchain, nullptr);
 
@@ -125,6 +128,7 @@ VShader Device::create_shader(const char *filePath) {
 
     VK_CHECK(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
     Shader shader { shaderModule };
+    return &shader;
 }
 
 void Device::submit_graphics_work(GraphicsContext &context) {
@@ -289,4 +293,74 @@ void Device::init_descriptors() {
 
     bindlessParams.build(device, allocator, descriptorPool);
     vkCmdBindDescriptorSets()*/
+}
+
+
+namespace wcvk {
+    Device::Device() {
+        glfwInit();
+        if (glfwVulkanSupported()) {
+            uint32_t count;
+            const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            window = glfwCreateWindow(1920, 1080, "Window Title", nullptr, nullptr);
+
+            vkb::InstanceBuilder builder;
+            auto instantRet = builder.set_app_name("WCVK")
+            .request_validation_layers(enableValidationLayers)
+            .require_api_version(1, 3, 0)
+            .use_default_debug_messenger()
+            .build();
+
+            vkb::Instance vkbInstance = instantRet.value();
+            instance = vkbInstance.instance;
+            debugMessenger = vkbInstance.debug_messenger;
+
+            VkSurfaceKHR tempSurface;
+            glfwCreateWindowSurface(instance, window, nullptr, &tempSurface);
+
+            vk::PhysicalDeviceVulkan12Features features12;
+            features12.bufferDeviceAddress = true;
+            features12.descriptorIndexing = true;
+            features12.runtimeDescriptorArray = true;
+            features12.drawIndirectCount = true;
+            features12.descriptorBindingPartiallyBound = true;
+            features12.descriptorBindingStorageTexelBufferUpdateAfterBind = true;
+            features12.descriptorBindingStorageImageUpdateAfterBind = true;
+
+            vk::PhysicalDeviceVulkan13Features features13;
+            features13.dynamicRendering = true;
+            features13.synchronization2 = true;
+
+            vkb::PhysicalDeviceSelector physicalDeviceSelector{ vkbInstance };
+            auto physical_device_selector_ret =
+                physicalDeviceSelector.set_surface(tempSurface).
+                set_minimum_version(1, 3).
+                require_dedicated_transfer_queue().
+                set_required_features_12(features12).
+                set_required_features_13(features13).
+                select();
+
+            surface = vk::SurfaceKHR(tempSurface);
+
+            vkb::DeviceBuilder deviceBuilder { physical_device_selector_ret.value() };
+            auto deviceRet = deviceBuilder.build();
+            vkb::Device vkbDevice = deviceRet.value();
+
+            physicalDevice = vkbDevice.physical_device;
+            device = vkbDevice.device;
+
+            graphics = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+            compute = vkbDevice.get_queue(vkb::QueueType::compute).value();
+            transfer = vkbDevice.get_queue(vkb::QueueType::transfer).value();
+
+            vkb::SwapchainBuilder swapchainBuilder { physicalDevice, vkbDevice, tempSurface };
+            swapchainFormat = vk::Format::eR8G8B8A8Unorm;
+            
+        }
+    }
+
+    Device::~Device() {
+    }
 }

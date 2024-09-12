@@ -3,10 +3,18 @@
 #define DESCRIPTORS_H
 
 #include "../vkinit.h"
-#include <array>
+#include "../device/resources.h"
 
-enum class TextureHandle : uint32_t { Invalid = 0 };
-enum class BufferHandle : uint32_t { Invalid = 0 };
+#include <array>
+#include <memory>
+
+struct Descriptor {
+    VkDescriptorSet set = VK_NULL_HANDLE;
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+    VkDeviceSize size{};
+    VkDeviceSize offset{};
+    Buffer buffer{};
+};
 
 static constexpr uint32_t UniformBinding = 0;
 static constexpr uint32_t StorageBinding = 1;
@@ -109,6 +117,7 @@ namespace descriptors {
         VmaAllocation allocation = VK_NULL_HANDLE;
         VkBuffer buffer = VK_NULL_HANDLE;
     };
+}
 
     /*struct DescriptorSetBuilder {
         void build(VkDevice device, VkDescriptorSetLayout& dsLayout, VkDescriptorPool& dsPool, VkDescriptorSet& ds);
@@ -132,8 +141,8 @@ namespace descriptors {
     private:
         void build_layout(VkDevice device, VkDescriptorSetLayout& dsLayout);
         void build_pool(VkDevice device, VkDescriptorPool& dsPool);
-    };*/
-}
+    };
+}*/
 
 
 #endif //DESCRIPTORS_H

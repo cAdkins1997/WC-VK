@@ -1,8 +1,8 @@
 
 #include "descriptors.h"
 
-namespace descriptors {
-    /*void DescriptorSetBuilder::build(VkDevice device, VkDescriptorSetLayout& dsLayout, VkDescriptorPool& dsPool, VkDescriptorSet& ds) {
+/*namespace descriptors {
+    void DescriptorSetBuilder::build(VkDevice device, VkDescriptorSetLayout& dsLayout, VkDescriptorPool& dsPool, VkDescriptorSet& ds) {
         build_layout(device, dsLayout);
         build_pool(device, dsPool);
 
@@ -37,5 +37,5 @@ namespace descriptors {
             );
 
         vkCreateDescriptorPool(device, &dsPoolCI, nullptr, &dsPool);
-    }*/
-}
+    }
+}*/

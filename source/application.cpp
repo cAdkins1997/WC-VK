@@ -4,15 +4,15 @@
 #include <chrono>
 
 Application::Application() {
-    init_immediate_commands();
-    run();
+    /*init_immediate_commands();
+    run();*/
 }
 
 Application::~Application() {
 
 }
 
-void Application::run() {
+/*void Application::run() {
     //VShader shader = device.create_shader("../shaders/test.comp.spv");
     //TextureHandle texture = device.create_image({1920, 1080, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false);
     while (!glfwWindowShouldClose(device.window)) {
@@ -35,7 +35,7 @@ void Application::draw() {
     graphicsContext.image_barrier(drawImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     VkClearColorValue clearValue;
-    float redValue = std::abs(std::sin(device.frameNumber / 1000000.0f));
+    float redValue = std::abs(std::sin(device.frameNumber / 100000.0f));
     float blueValue = std::abs(std::tan(device.frameNumber / 10000.0f));
     clearValue = { { redValue, 0.1f, blueValue, 1.0f } };
 
@@ -69,3 +69,35 @@ void Application::init_immediate_commands() {
     VkFenceCreateInfo fenceCI = vkinit::fence_CI(VK_FENCE_CREATE_SIGNALED_BIT);
     vkCreateFence(device.device, &fenceCI, nullptr, &immediateFence);
 }
+
+void Application::init_descriptors() {
+    /*Descriptor uniformDescriptor;
+    vkGetDescriptorSetLayoutSizeEXT(device.device, uniformDescriptor.layout, &uniformDescriptor.size);
+    vkGetDescriptorSetLayoutBindingOffsetEXT(device.device, uniformDescriptor.layout, 0u, &uniformDescriptor.offset);
+
+
+    VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.pNext = nullptr;
+    bufferInfo.size = uniformDescriptor.size;
+    bufferInfo.usage =
+        VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT |
+            VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT |
+                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+
+    VmaAllocationCreateInfo vmaallocInfo{};
+    vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+    vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    vmaCreateBuffer(
+        device.allocator,
+        &bufferInfo,
+        &vmaallocInfo,
+        &uniformDSBuffer.buffer,
+        &uniformDSBuffer.allocation,
+        &uniformDSBuffer.info
+        );
+
+    uniformDescriptor.buffer = uniformDSBuffer;
+}
+*/
