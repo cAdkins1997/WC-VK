@@ -2,6 +2,7 @@
 #pragma once
 #include "resources.h"
 #include "../context.h"
+#include "../vkcommon.h"
 #include <VkBootstrap.h>
 
 namespace wcvk {

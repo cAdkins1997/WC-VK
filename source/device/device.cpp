@@ -79,6 +79,10 @@ namespace wcvk {
                 select();
 
             physical_device_selector_ret->enable_extension_if_present("VK_EXT_descriptor_buffer");
+            auto extensionsPossible = physical_device_selector_ret->get_extensions();
+            for (const auto& extension : extensionsPossible) {
+                std::cout << extension;
+            }
 
             surface = vk::SurfaceKHR(tempSurface);
 
@@ -120,6 +124,7 @@ namespace wcvk {
             init_sync_objects();
             init_allocator();
             init_draw_images();
+            init_descriptors();
         }
     }
 
@@ -179,7 +184,10 @@ namespace wcvk {
     }
 
     void Device::init_descriptors() {
-
+        VkPhysicalDeviceProperties2 deviceProperties{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR };
+        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT };
+        deviceProperties.pNext = &descriptorBufferProperties;
+        vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties);
     }
 
     void Device::init_draw_images() {
