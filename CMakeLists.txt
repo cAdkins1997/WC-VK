@@ -15,17 +15,9 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/vkinit.cpp
         source/pipelines/graphicspipelines.cpp
         source/pipelines/graphicspipelines.h
-        source/pipelines/shaders.cpp
-        source/pipelines/shaders.h
         source/device/device.cpp
-        source/device/device.h
         source/vkcommon.cpp
-        source/device/InstanceHelper.cpp
-        source/device/InstanceHelper.h
-        source/device/DeviceHelper.cpp
-        source/device/DeviceHelper.h
         source/device/resources.h
-        source/meshes/mesh.h
         source/device/device.hpp)
 
 if (WIN32)

@@ -2,5 +2,5 @@
 #include "application.h"
 
 int main() {
-    Application application;
+    wcvk::Application application;
 }

@@ -1,19 +1,18 @@
 
-#ifndef RESOURCES_H
-#define RESOURCES_H
-
+#pragma once
 #include "../vkcommon.h"
-struct FrameData {
-    VkCommandPool commandPool = VK_NULL_HANDLE;
-    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 
-    VkSemaphore swapchainSemaphore = VK_NULL_HANDLE;
-    VkSemaphore renderSemaphore = VK_NULL_HANDLE;
-    VkFence renderFence = VK_NULL_HANDLE;
+struct FrameData {
+    vk::CommandPool commandPool;
+    vk::CommandBuffer commandBuffer;
+
+    vk::Semaphore swapchainSemaphore;
+    vk::Semaphore renderSemaphore;
+    vk::Fence renderFence;
 };
 
 struct Buffer {
-    VkBuffer buffer;
+    vk::Buffer buffer;
     VmaAllocation allocation;
     VmaAllocationInfo info;
 };
@@ -22,7 +21,7 @@ struct Image {
     VkImage image;
     VkImageView imageView;
     VmaAllocation allocation;
-    VkExtent3D imageExtent;
+    vk::Extent3D imageExtent;
     VkFormat imageFormat;
     VkSampler sampler;
     size_t handle;
@@ -66,7 +65,5 @@ struct Shader {
 
 
 struct Pipeline {
-    VkPipeline pipeline;
+    vk::Pipeline pipeline;
 };
-
-#endif //RESOURCES_H
