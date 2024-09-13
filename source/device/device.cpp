@@ -78,6 +78,8 @@ namespace wcvk {
                 set_required_features_13(features13).
                 select();
 
+            physical_device_selector_ret->enable_extension_if_present("VK_EXT_descriptor_buffer");
+
             surface = vk::SurfaceKHR(tempSurface);
 
             vkb::DeviceBuilder deviceBuilder { physical_device_selector_ret.value() };
@@ -174,6 +176,10 @@ namespace wcvk {
         allocatorInfo.instance =  instance;
         allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         vmaCreateAllocator(&allocatorInfo, &allocator);
+    }
+
+    void Device::init_descriptors() {
+
     }
 
     void Device::init_draw_images() {
