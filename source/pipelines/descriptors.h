@@ -8,14 +8,6 @@
 #include <array>
 #include <memory>
 
-struct Descriptor {
-    VkDescriptorSet set = VK_NULL_HANDLE;
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-    VkDeviceSize size{};
-    VkDeviceSize offset{};
-    Buffer buffer{};
-};
-
 static constexpr uint32_t UniformBinding = 0;
 static constexpr uint32_t StorageBinding = 1;
 static constexpr uint32_t TextureBinding = 2;

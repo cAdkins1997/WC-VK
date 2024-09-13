@@ -117,8 +117,20 @@ namespace wcvk {
 
             swapchainExtent = vkbSwapchain.extent;
             swapchain = vkbSwapchain.swapchain;
-            swapchainImages = vkbSwapchain.get_images().value();
-            swapchainImageViews = vkbSwapchain.get_image_views().value();
+            std::vector imageTransferVector = vkbSwapchain.get_images().value();
+            uint32_t i = 0;
+            for (auto image : imageTransferVector) {
+                swapchainImages[i] = image;
+                i++;
+            }
+
+            std::vector imageViewTransferVector = vkbSwapchain.get_image_views().value();
+
+            i = 0;
+            for (auto imageView : imageViewTransferVector) {
+                swapchainImageViews[i] = imageView;
+                i++;
+            }
 
             init_commands();
             init_sync_objects();

@@ -1,5 +1,9 @@
 
 #pragma once
+#include <EASTL/compare.h>
+#include <EASTL/vector.h>
+#include <EASTL/string.h>
+
 #include "../vkcommon.h"
 
 struct FrameData {
@@ -41,8 +45,8 @@ struct Surface {
 };
 
 struct Mesh {
-    std::string name{};
-    std::vector<Surface> surfaces;
+    eastl::string name{};
+    eastl::vector<Surface> surfaces;
 };
 
 enum class TextureHandle : uint32_t { Invalid = 0 };
@@ -51,7 +55,7 @@ enum class BufferHandle : uint32_t { Invalid = 0 };
 struct MeshBuffer {
     BufferHandle indexBuffer;
     BufferHandle vertexBuffer;
-    VkDeviceAddress vertexBufferAddress;
+    vk::DeviceAddress deviceAddress;
 };
 
 struct PushConstants {
@@ -66,4 +70,12 @@ struct Shader {
 
 struct Pipeline {
     vk::Pipeline pipeline;
+};
+
+struct Descriptor {
+    VkBuffer bufer;
+    vk::DeviceAddress deviceAddress;
+    vk::DescriptorSetLayout layout;
+    size_t offset;
+    size_t size;
 };

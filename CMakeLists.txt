@@ -27,6 +27,8 @@ find_package(vk-bootstrap CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcp
 find_package(fmt CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fmt_x64-mingw-dynamic")
 find_package(simdjson CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/simdjson_x64-mingw-dynamic")
 find_package(fastgltf CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fastgltf_x64-mingw-dynamic")
+find_package(EABase CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/eabase_x64-mingw-dynamic")
+find_package(EASTL CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/eastl_x64-mingw-dynamic")
 add_subdirectory(include/glfw-3.4)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -39,7 +41,10 @@ target_link_libraries(${PROJECT_NAME}
         vk-bootstrap::vk-bootstrap
         vk-bootstrap::vk-bootstrap-compiler-warnings
         fastgltf::fastgltf
-        fmt::fmt)
+        fmt::fmt
+        EASTL
+        EABase
+)
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
     set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")

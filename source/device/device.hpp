@@ -4,6 +4,7 @@
 #include "../context.h"
 #include "../vkcommon.h"
 #include <VkBootstrap.h>
+#include <EASTL/vector.h>
 
 namespace wcvk {
 
@@ -40,8 +41,8 @@ namespace wcvk {
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;
         vk::Format swapchainFormat;
-        std::vector<VkImage> swapchainImages{};
-        std::vector<VkImageView> swapchainImageViews{};
+        eastl::vector<VkImage> swapchainImages{};
+        eastl::vector<VkImageView> swapchainImageViews{};
         vk::Extent2D swapchainExtent{};
         uint32_t swapchainImageIndex = 0;
         FrameData frames[MAX_FRAMES_IN_FLIGHT];
