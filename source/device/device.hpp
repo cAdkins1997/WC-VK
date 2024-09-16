@@ -31,6 +31,9 @@ namespace wcvk {
         void wait_on_work();
         void present();
 
+        VkImage& get_swapchain_image();
+        VkImage& get_draw_image();
+
     public:
         Device();
         ~Device();

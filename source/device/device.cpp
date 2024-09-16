@@ -112,6 +112,14 @@ namespace wcvk {
         frameNumber++;
     }
 
+    VkImage& Device::get_swapchain_image() {
+        return swapchainImages[get_swapchain_image_index()];
+    }
+
+    VkImage& Device::get_draw_image() {
+        return drawImage.image;
+    }
+
     Device::Device() {
         glfwInit();
         if (glfwVulkanSupported()) {

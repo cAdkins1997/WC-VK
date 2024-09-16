@@ -42,9 +42,8 @@ namespace wcvk {
         device.wait_on_work();
 
         FrameData& currentFrame = device.get_current_frame();
-        uint32_t swapchainImageIndex = device.get_swapchain_image_index();
-        VkImage& currentSwapchainImage = device.swapchainImages[swapchainImageIndex];
-        VkImage& drawImage = device.drawImage.image;
+        VkImage& currentSwapchainImage = device.get_swapchain_image();
+        VkImage& drawImage = device.get_draw_image();
 
         ComputeContext computeContext(currentFrame.commandBuffer);
         computeContext.begin();
