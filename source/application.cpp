@@ -51,11 +51,14 @@ namespace wcvk {
         computeContext.set_pipeline(drawImagePipeline);
         computeContext.image_barrier(drawImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
-        computeContext.dispatch(std::ceil(1920 / 16.0), std::ceil(1080 / 16.0), 1);
+        computeContext.dispatch(std::ceil(device.width / 16.0), std::ceil(device.height / 16.0), 1);
 
         computeContext.image_barrier(drawImage, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
         computeContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
-        computeContext.copy_image(drawImage, currentSwapchainImage, {1920, 1080}, {1920, 1080});
+        vk::Extent2D extent;
+        extent.height = device.height;
+        extent.width = device.width;
+        computeContext.copy_image(drawImage, currentSwapchainImage, extent, extent);
         computeContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
 
         computeContext.end();

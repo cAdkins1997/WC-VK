@@ -119,7 +119,8 @@ namespace wcvk {
             const char** extensions = glfwGetRequiredInstanceExtensions(&count);
 
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            window = glfwCreateWindow(1920, 1080, "Window Title", nullptr, nullptr);
+            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+            window = glfwCreateWindow(width, height, "Window Title", nullptr, nullptr);
 
             vkb::InstanceBuilder builder;
             auto instantRet = builder.set_app_name("WCVK")
