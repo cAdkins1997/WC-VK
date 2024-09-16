@@ -2,6 +2,67 @@
 #include "device.hpp"
 
 namespace wcvk {
+    Image* Device::create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped) {
+        Image newImage{};
+        newImage.imageFormat = format;
+        newImage.imageExtent = size;
+
+        VkImageCreateInfo imageCI = vkinit::image_create_info(static_cast<VkFormat>(format) ,static_cast<VkImageUsageFlags>(usage), VkExtent3D(size));
+        if (mipmapped) {
+            imageCI.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
+        }
+
+        VmaAllocationCreateInfo allocInfo{};
+        allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        allocInfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        vmaCreateImage(allocator, &imageCI, &allocInfo, &newImage.image, &newImage.allocation, nullptr);
+
+        vk::ImageAspectFlags aspectFlag = vk::ImageAspectFlagBits::eColor;
+        if (format  == vk::Format::eD32Sfloat)
+            aspectFlag = vk::ImageAspectFlagBits::eDepth;
+
+        vk::ComponentMapping components {
+            vk::ComponentSwizzle::eIdentity,
+            vk::ComponentSwizzle::eIdentity,
+            vk::ComponentSwizzle::eIdentity,
+            vk::ComponentSwizzle::eIdentity
+        };
+
+        vk::ImageViewCreateInfo viewInfo({}, newImage.image, vk::ImageViewType::e2D, format, components, aspectFlag);
+        viewInfo.subresourceRange.levelCount = imageCI.mipLevels;
+
+        newImage.imageView = device.createImageView(viewInfo, nullptr);
+
+        vk::SamplerCreateInfo samplerCI({}, vk::Filter::eNearest);
+        newImage.sampler = device.createSampler(samplerCI, nullptr);
+
+        images.push_back(newImage);
+        return images.end();
+    }
+
+    Shader Device::create_shader(const char* filePath) const {
+        std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+
+        assert(file.is_open() && "failed to open file\n");
+
+        size_t fileSize = static_cast<size_t>(file.tellg());
+
+        eastl::vector<uint32_t> buffer (fileSize / sizeof(uint32_t));
+
+        file.seekg(0);
+        file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
+        file.close();
+
+        vk::ShaderModuleCreateInfo shaderCI;
+        shaderCI.codeSize = buffer.size() * sizeof(uint32_t);
+        shaderCI.pCode = buffer.data();
+
+        vk::ShaderModule shaderModule;
+        assert(device.createShaderModule(&shaderCI, nullptr, &shaderModule) == vk::Result::eSuccess && "Failed to create shader module");
+        const Shader shader { shaderModule };
+        return shader;
+    }
 
     void Device::submit_graphics_work(const GraphicsContext &graphicsContext) {
         vk::CommandBuffer cmd = graphicsContext.commandBuffer ;
@@ -19,6 +80,24 @@ namespace wcvk {
             1, &commandBufferSI,
             1, &signalInfo);
         graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
+    }
+
+    void Device::submit_compute_work(const ComputeContext &context) {
+        vk::CommandBuffer cmd = context._commandBuffer ;
+        vk::CommandBufferSubmitInfo commandBufferSI(cmd);
+
+        FrameData& currentFrame = get_current_frame();
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
+        waitInfo.stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
+        signalInfo.stageMask = vk::PipelineStageFlagBits2::eAllGraphics;
+        vk::SubmitFlagBits submitFlags{};
+        vk::SubmitInfo2 submitInfo(
+            submitFlags,
+            1, &waitInfo,
+            1, &commandBufferSI,
+            1, &signalInfo);
+        assert(graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence) == vk::Result::eSuccess && "Failed to submit to submit queue\n");
     }
 
     void Device::wait_on_work() {
@@ -64,6 +143,7 @@ namespace wcvk {
             features12.descriptorBindingPartiallyBound = true;
             features12.descriptorBindingStorageTexelBufferUpdateAfterBind = true;
             features12.descriptorBindingStorageImageUpdateAfterBind = true;
+            features12.descriptorBindingVariableDescriptorCount = true;
 
             vk::PhysicalDeviceVulkan13Features features13;
             features13.dynamicRendering = true;
@@ -117,19 +197,15 @@ namespace wcvk {
 
             swapchainExtent = vkbSwapchain.extent;
             swapchain = vkbSwapchain.swapchain;
-            std::vector imageTransferVector = vkbSwapchain.get_images().value();
-            uint32_t i = 0;
-            for (auto image : imageTransferVector) {
-                swapchainImages[i] = image;
-                i++;
+
+            std::vector<VkImage> imageTransferVector = vkbSwapchain.get_images().value();
+            for (auto i : imageTransferVector) {
+                swapchainImages.push_back(i);
             }
 
-            std::vector imageViewTransferVector = vkbSwapchain.get_image_views().value();
-
-            i = 0;
-            for (auto imageView : imageViewTransferVector) {
-                swapchainImageViews[i] = imageView;
-                i++;
+            std::vector<VkImageView_T*> imageViewTransferVector = vkbSwapchain.get_image_views().value();
+            for (auto i : imageViewTransferVector) {
+                swapchainImageViews.push_back(i);
             }
 
             init_commands();
@@ -196,25 +272,21 @@ namespace wcvk {
     }
 
     void Device::init_descriptors() {
-        VkPhysicalDeviceProperties2 deviceProperties{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR };
-        VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT };
-        deviceProperties.pNext = &descriptorBufferProperties;
-        vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties);
     }
 
     void Device::init_draw_images() {
         VkExtent3D drawImageExtent = { width, height, 1 };
 
-        drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+        drawImage.imageFormat = static_cast<vk::Format>(VK_FORMAT_R16G16B16A16_SFLOAT);
         drawImage.imageExtent = drawImageExtent;
 
-        VkImageUsageFlags drawImageUsages{};
+         VkImageUsageFlags drawImageUsages{};
         drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
         drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        VkImageCreateInfo rimg_info = vkinit::image_create_info(drawImage.imageFormat, drawImageUsages, drawImageExtent);
+        VkImageCreateInfo rimg_info = vkinit::image_create_info(static_cast<VkFormat>(drawImage.imageFormat), drawImageUsages, drawImageExtent);
 
         VmaAllocationCreateInfo rimg_allocinfo = {};
         rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -230,8 +302,8 @@ namespace wcvk {
         };
 
         auto subresourceRange = vkinit::subresource_range(VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1);
-        VkImageViewCreateInfo viewInfo = vkinit::image_view_CI(drawImage.image, VK_IMAGE_VIEW_TYPE_2D, drawImage.imageFormat, components, subresourceRange);
+        VkImageViewCreateInfo viewInfo = vkinit::image_view_CI(drawImage.image, VK_IMAGE_VIEW_TYPE_2D, static_cast<VkFormat>(drawImage.imageFormat), components, subresourceRange);
 
-        vkCreateImageView(device, &viewInfo, nullptr, &drawImage.imageView);
+        vkCreateImageView(device, &viewInfo, nullptr, reinterpret_cast<VkImageView*>(&drawImage.imageView));
     }
 }

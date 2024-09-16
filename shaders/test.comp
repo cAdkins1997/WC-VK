@@ -1,5 +1,20 @@
 #version 450
 
-void main() {
+layout (rgba16f, set = 0, binding  = 0) uniform image2D drawImage;
+layout (local_size_x = 16, local_size_y = 16) in;
 
+void main() {
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(drawImage);
+
+    if (texelCoord.x < size.x && texelCoord.y < size.y) {
+        vec4 color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+        if (gl_GlobalInvocationID.x != 0 && gl_GlobalInvocationID.y != 0) {
+            color.x = float(texelCoord.x)/size.x;
+            color.y = float(texelCoord.y)/size.y;
+        }
+
+        imageStore(drawImage, texelCoord, color);
+    }
 }

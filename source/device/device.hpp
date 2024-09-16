@@ -3,6 +3,7 @@
 #include "resources.h"
 #include "../context.h"
 #include "../vkcommon.h"
+#include <fstream>
 #include <VkBootstrap.h>
 #include <EASTL/vector.h>
 
@@ -19,8 +20,12 @@ namespace wcvk {
     class Device {
 
     public:
+        Buffer* create_buffer();
+        [[nodiscard]] Image* create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped);
+        Shader create_shader(const char* filePath) const;
+
         void submit_graphics_work(const GraphicsContext& context);
-        void submit_compute_work(ComputeContext& context);
+        void submit_compute_work(const ComputeContext& context);
         void submit_raytracing_work(RaytracingContext& context);
 
         void wait_on_work();
@@ -56,6 +61,8 @@ namespace wcvk {
 
         VmaAllocator allocator{};
 
+        eastl::vector<Image> images;
+
         FrameData& get_current_frame() { return frames[frameNumber % MAX_FRAMES_IN_FLIGHT]; };
         uint32_t get_swapchain_image_index() {
             vkAcquireNextImageKHR(device, swapchain, 1000000000, get_current_frame().swapchainSemaphore, nullptr, &swapchainImageIndex);
@@ -72,6 +79,6 @@ namespace wcvk {
         void init_sync_objects();
         void init_allocator();
         void init_descriptors();
-        void init_draw_images();
+        void init_draw_images();;
     };
 }

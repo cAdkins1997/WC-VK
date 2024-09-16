@@ -29,7 +29,10 @@ find_package(simdjson CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/p
 find_package(fastgltf CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fastgltf_x64-mingw-dynamic")
 find_package(EABase CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/eabase_x64-mingw-dynamic")
 find_package(EASTL CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/eastl_x64-mingw-dynamic")
+find_package(mimalloc CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/mimalloc_x64-mingw-dynamic")
 add_subdirectory(include/glfw-3.4)
+
+set(EASTL_LIBRARY debug ${z}/build/Debug/EASTL.lib optimized ${EASTL_ROOT_DIR}/build/Release/EASTL.lib)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -44,6 +47,7 @@ target_link_libraries(${PROJECT_NAME}
         fmt::fmt
         EASTL
         EABase
+        $<IF:$<TARGET_EXISTS:mimalloc-static>,mimalloc-static,mimalloc>
 )
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")

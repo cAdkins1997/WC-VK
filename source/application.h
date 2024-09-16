@@ -15,9 +15,15 @@ namespace wcvk {
 
         void run();
         void draw();
-    private:
 
-        wcvk::Device device;
+    private:
+        void init_descriptors();
+
+        DescriptorAllocator descriptorAllocator;
+        Pipeline drawImagePipeline;
+
+    private:
+        Device device;
     };
 }
 

@@ -5,6 +5,7 @@
 #include <EASTL/string.h>
 
 #include "../vkcommon.h"
+#include "../pipelines/descriptors.h"
 
 struct FrameData {
     vk::CommandPool commandPool;
@@ -13,6 +14,8 @@ struct FrameData {
     vk::Semaphore swapchainSemaphore;
     vk::Semaphore renderSemaphore;
     vk::Fence renderFence;
+
+    DescriptorAllocator frameDescriptors;
 };
 
 struct Buffer {
@@ -23,11 +26,11 @@ struct Buffer {
 
 struct Image {
     VkImage image;
-    VkImageView imageView;
+    vk::ImageView imageView;
     VmaAllocation allocation;
     vk::Extent3D imageExtent;
-    VkFormat imageFormat;
-    VkSampler sampler;
+    vk::Format imageFormat;
+    vk::Sampler sampler;
     size_t handle;
 };
 
@@ -64,18 +67,18 @@ struct PushConstants {
 };
 
 struct Shader {
-    VkShaderModule module;
+    vk::ShaderModule module;
 };
-
 
 struct Pipeline {
     vk::Pipeline pipeline;
+    vk::PipelineLayout pipelineLayout;
+    vk::DescriptorSet set;
+    vk::DescriptorSetLayout descriptorLayout;
 };
 
-struct Descriptor {
-    VkBuffer bufer;
-    vk::DeviceAddress deviceAddress;
-    vk::DescriptorSetLayout layout;
-    size_t offset;
-    size_t size;
+struct ProjectData {
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 viewproj;
 };

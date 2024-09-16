@@ -14,6 +14,10 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
+#include <mimalloc.h>
+
+void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned debugFlags, const char* file, int line);
+
 #include <iostream>
 
 #endif //VKCOMMON_H
