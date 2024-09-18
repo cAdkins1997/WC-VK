@@ -65,7 +65,7 @@ namespace wcvk {
     }
 
     void Device::submit_graphics_work(const GraphicsContext &graphicsContext) {
-        vk::CommandBuffer cmd = graphicsContext.commandBuffer ;
+        vk::CommandBuffer cmd = graphicsContext._commandBuffer ;
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();

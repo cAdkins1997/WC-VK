@@ -7,7 +7,7 @@
 
 namespace wcvk {
     struct GraphicsContext {
-        explicit GraphicsContext(const vk::CommandBuffer& _commandBuffer);
+        explicit GraphicsContext(const vk::CommandBuffer& commandBuffer);
 
         void begin();
         void end();
@@ -20,8 +20,15 @@ namespace wcvk {
             VkPipelineStageFlags2 dstStageFlags, VkAccessFlags2 dstAccessMask);
         void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout);
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
+        void set_up_render_pass(const Image& drawImage);
+        void set_viewport(uint32_t x, uint32_t y, float mindDepth, float maxDepth);
+        void set_scissor(uint32_t x, uint32_t y);
+        void set_pipeline(const Pipeline& pipeline);
+        void draw();
 
-        vk::CommandBuffer commandBuffer{};
+        Image renderPassImage;
+        vk::CommandBuffer _commandBuffer;
+        Pipeline _pipeline;
     };
 
     struct ComputeContext {

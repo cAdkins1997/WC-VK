@@ -47,23 +47,21 @@ struct Surface {
     uint32_t count{};
 };
 
+struct MeshBuffer {
+    Buffer indexBuffer;
+    Buffer vertexBuffer;
+    vk::DeviceAddress deviceAddress;
+};
+
 struct Mesh {
     eastl::string name{};
     eastl::vector<Surface> surfaces;
-};
-
-enum class TextureHandle : uint32_t { Invalid = 0 };
-enum class BufferHandle : uint32_t { Invalid = 0 };
-
-struct MeshBuffer {
-    BufferHandle indexBuffer;
-    BufferHandle vertexBuffer;
-    vk::DeviceAddress deviceAddress;
+    MeshBuffer mesh;
 };
 
 struct PushConstants {
     glm::mat4 worldMatrix;
-    VkDeviceAddress vertexBuffer;
+    vk::DeviceAddress vertexBuffer;
 };
 
 struct Shader {

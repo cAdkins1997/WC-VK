@@ -21,11 +21,11 @@ namespace wcvk {
 
         DescriptorAllocator descriptorAllocator;
         Pipeline drawImagePipeline;
+        Pipeline trianglePipeline;
 
     private:
         Device device;
     };
 }
-
 
 #endif //APPLICATION_H

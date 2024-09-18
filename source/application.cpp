@@ -2,6 +2,8 @@
 #include "application.h"
 #include <chrono>
 
+#include "pipelines/graphicspipelines.h"
+
 namespace wcvk {
     Application::Application() {
         run();
@@ -32,6 +34,25 @@ namespace wcvk {
 
         drawImagePipeline.pipeline = device.device.createComputePipeline(nullptr, computePipelineCI).value;
 
+        Shader vertShader = device.create_shader("../shaders/test.frag.spv");
+        Shader fragShader = device.create_shader("../shaders/test.vert.spv");
+
+        PipelineBuilder pipelineBuilder;
+        pipelineBuilder.pipelineLayout = trianglePipeline.pipelineLayout;
+        pipelineBuilder.set_shader(vertShader.module, fragShader.module);
+        pipelineBuilder.set_input_topology(vk::PrimitiveTopology::eTriangleList);
+        pipelineBuilder.set_polygon_mode(vk::PolygonMode::eFill);
+        pipelineBuilder.set_cull_mode(vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise);
+        pipelineBuilder.set_multisampling_none();
+        pipelineBuilder.disable_depthtest();
+        pipelineBuilder.set_color_attachment_format(device.drawImage.imageFormat);
+        pipelineBuilder.set_depth_format(vk::Format::eUndefined);
+        trianglePipeline.pipeline = pipelineBuilder.build_pipeline(device.device);
+
+        device.device.destroyShaderModule(compShader.module);
+        device.device.destroyShaderModule(vertShader.module);
+        device.device.destroyShaderModule(fragShader.module);
+
         while (!glfwWindowShouldClose(device.window)) {
             draw();
             glfwPollEvents();
@@ -51,17 +72,24 @@ namespace wcvk {
         computeContext.image_barrier(drawImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 
         computeContext.dispatch(std::ceil(device.width / 16.0), std::ceil(device.height / 16.0), 1);
-
-        computeContext.image_barrier(drawImage, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
-        computeContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
-        vk::Extent2D extent;
-        extent.height = device.height;
-        extent.width = device.width;
-        computeContext.copy_image(drawImage, currentSwapchainImage, extent, extent);
-        computeContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
-
         computeContext.end();
+
+        GraphicsContext graphicsContext(currentFrame.commandBuffer);
+        graphicsContext.set_pipeline(trianglePipeline);
+        graphicsContext.image_barrier(drawImage, vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
+        graphicsContext.set_up_render_pass(device.drawImage);
+        graphicsContext.set_viewport(0, 0, 0.0f, 1.0f);
+        graphicsContext.set_scissor(0, 0);
+        graphicsContext.draw();
+
+        graphicsContext.image_barrier(drawImage, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferSrcOptimal);
+        graphicsContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+        graphicsContext.copy_image(drawImage, currentSwapchainImage, {device.height, device.width}, {device.height, device.width});
+        graphicsContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
+
+        graphicsContext.end();
         device.submit_compute_work(computeContext);
+        device.submit_graphics_work(graphicsContext);
         device.present();
     }
 

@@ -2,16 +2,16 @@
 #include "context.h"
 
 namespace wcvk {
-    GraphicsContext::GraphicsContext(const vk::CommandBuffer& _commandBuffer) : commandBuffer(_commandBuffer) {}
+    GraphicsContext::GraphicsContext(const vk::CommandBuffer& commandBuffer) : _commandBuffer(commandBuffer) {}
 
     void GraphicsContext::begin() {
-        commandBuffer.reset();
+        _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        assert(commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end graphics command buffer\n");
+        assert(_commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end graphics command buffer\n");
     }
 
     void GraphicsContext::end() {
-        commandBuffer.end();
+        _commandBuffer.end();
     }
 
     void GraphicsContext::memory_barrier(
@@ -29,7 +29,7 @@ namespace wcvk {
         VkDependencyInfo dependencyInfo { .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .pNext = nullptr };
         dependencyInfo.memoryBarrierCount = 1;
         dependencyInfo.pMemoryBarriers = &memoryBarrier;
-        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+        vkCmdPipelineBarrier2(_commandBuffer, &dependencyInfo);
     }
 
     void GraphicsContext::buffer_barrier(
@@ -49,7 +49,7 @@ namespace wcvk {
         VkDependencyInfo dependencyInfo { .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .pNext = nullptr };
         dependencyInfo.bufferMemoryBarrierCount = 1;
         dependencyInfo.pBufferMemoryBarriers = &bufferBarrier;
-        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+        vkCmdPipelineBarrier2(_commandBuffer, &dependencyInfo);
     }
 
     void GraphicsContext::image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout) {
@@ -76,7 +76,7 @@ namespace wcvk {
         vk::DependencyInfo dependencyInfo;
         dependencyInfo.imageMemoryBarrierCount = 1;
         dependencyInfo.pImageMemoryBarriers = &imageBarrier;
-        commandBuffer.pipelineBarrier2(&dependencyInfo);
+        _commandBuffer.pipelineBarrier2(&dependencyInfo);
     }
 
     void GraphicsContext::copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {\
@@ -110,7 +110,40 @@ namespace wcvk {
             vk::Filter::eLinear
             );
 
-        commandBuffer.blitImage2(&blitInfo);
+        _commandBuffer.blitImage2(&blitInfo);
+    }
+
+    void GraphicsContext::set_up_render_pass(const Image &drawImage) {
+        renderPassImage = drawImage;
+        vk::RenderingAttachmentInfo colorAttachment(renderPassImage.imageView, vk::ImageLayout::eColorAttachmentOptimal);
+        vk::RenderingInfo renderInfo({}, { renderPassImage.imageExtent.height, renderPassImage.imageExtent.width});
+        renderInfo.pColorAttachments = &colorAttachment;
+        _commandBuffer.beginRendering(&renderInfo);
+    }
+
+    void GraphicsContext::set_viewport(uint32_t x, uint32_t y, float mindDepth, float maxDepth) {
+        vk::Viewport viewport(0, 0, renderPassImage.imageExtent.width, renderPassImage.imageExtent.height);
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
+        _commandBuffer.setViewport(0, 1, &viewport);
+    }
+
+    void GraphicsContext::set_scissor(uint32_t x, uint32_t y) {
+        vk::Rect2D scissor;
+        vk::Extent2D extent {renderPassImage.imageExtent.width, renderPassImage.imageExtent.height};
+        scissor.extent = extent;
+        _commandBuffer.setScissor(0, 1, &scissor);
+    }
+
+    void GraphicsContext::set_pipeline(const Pipeline &pipeline) {
+        _pipeline = pipeline;
+        _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
+        _commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, _pipeline.pipeline);
+    }
+
+    void GraphicsContext::draw() {
+        _commandBuffer.draw(3, 1, 0, 0);
+        _commandBuffer.endRendering();
     }
 
     ComputeContext::ComputeContext(const vk::CommandBuffer &commandBuffer) : _commandBuffer(commandBuffer) {}
