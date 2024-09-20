@@ -66,7 +66,7 @@ namespace wcvk {
         VkImage& currentSwapchainImage = device.get_swapchain_image();
         VkImage& drawImage = device.get_draw_image();
 
-        ComputeContext computeContext(currentFrame.commandBuffer);
+        commands::ComputeContext computeContext(currentFrame.computeCommandBuffer);
         computeContext.begin();
         computeContext.set_pipeline(drawImagePipeline);
         computeContext.image_barrier(drawImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
@@ -74,7 +74,7 @@ namespace wcvk {
         computeContext.dispatch(std::ceil(device.width / 16.0), std::ceil(device.height / 16.0), 1);
         computeContext.end();
 
-        GraphicsContext graphicsContext(currentFrame.commandBuffer);
+        commands::GraphicsContext graphicsContext(currentFrame.graphicsCommandBuffer);
         graphicsContext.set_pipeline(trianglePipeline);
         graphicsContext.image_barrier(drawImage, vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
         graphicsContext.set_up_render_pass(device.drawImage);

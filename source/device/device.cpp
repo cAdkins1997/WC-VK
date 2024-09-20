@@ -1,7 +1,26 @@
 
 #include "device.hpp"
 
-namespace wcvk {
+namespace wcvk::core {
+    Buffer Device::create_buffer(size_t allocSize, vk::BufferUsageFlags usage, VmaMemoryUsage memoryUsage) const {
+        VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        bufferInfo.pNext = nullptr;
+        bufferInfo.size = allocSize;
+
+        const auto bufferUsage = static_cast<VkBufferUsageFlags>(usage);
+        bufferInfo.usage = bufferUsage;
+
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = memoryUsage;
+        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        Buffer newBuffer;
+
+        auto vmaBuffer = static_cast<VkBuffer>(newBuffer.buffer);
+        vmaCreateBuffer(allocator, &bufferInfo, &vmaallocInfo, &vmaBuffer, &newBuffer.allocation, &newBuffer.info);
+
+        return newBuffer;
+    }
+
     Image* Device::create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped) {
         Image newImage{};
         newImage.imageFormat = format;
@@ -64,7 +83,7 @@ namespace wcvk {
         return shader;
     }
 
-    void Device::submit_graphics_work(const GraphicsContext &graphicsContext) {
+    void Device::submit_graphics_work(const commands::GraphicsContext &graphicsContext) {
         vk::CommandBuffer cmd = graphicsContext._commandBuffer ;
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
@@ -82,7 +101,7 @@ namespace wcvk {
         graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
     }
 
-    void Device::submit_compute_work(const ComputeContext &context) {
+    void Device::submit_compute_work(const commands::ComputeContext &context) {
         vk::CommandBuffer cmd = context._commandBuffer ;
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
@@ -98,6 +117,24 @@ namespace wcvk {
             1, &commandBufferSI,
             1, &signalInfo);
         assert(graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence) == vk::Result::eSuccess && "Failed to submit to submit queue\n");
+    }
+
+    void Device::submit_upload_work(commands::UploadContext &context) {
+        vk::CommandBuffer cmd = context._commandBuffer ;
+        vk::CommandBufferSubmitInfo commandBufferSI(cmd);
+
+        FrameData& currentFrame = get_current_frame();
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
+        waitInfo.stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
+        signalInfo.stageMask = vk::PipelineStageFlagBits2::eAllGraphics;
+        vk::SubmitFlagBits submitFlags{};
+        vk::SubmitInfo2 submitInfo(
+            submitFlags,
+            1, &waitInfo,
+            1, &commandBufferSI,
+            1, &signalInfo);
+        graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
     }
 
     void Device::wait_on_work() {
@@ -256,7 +293,9 @@ namespace wcvk {
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             frames[i].commandPool = device.createCommandPool(commandPoolCI, nullptr);
             vk::CommandBufferAllocateInfo commandBufferAI(frames[i].commandPool, vk::CommandBufferLevel::ePrimary, 1);
-            device.allocateCommandBuffers(&commandBufferAI, &frames[i].commandBuffer);
+            device.allocateCommandBuffers(&commandBufferAI, &frames[i].graphicsCommandBuffer);
+            device.allocateCommandBuffers(&commandBufferAI, &frames[i].graphicsCommandBuffer);
+            device.allocateCommandBuffers(&commandBufferAI, &frames[i].uploadCommandBuffer);
         }
     }
 

@@ -9,7 +9,9 @@
 
 struct FrameData {
     vk::CommandPool commandPool;
-    vk::CommandBuffer commandBuffer;
+    vk::CommandBuffer graphicsCommandBuffer;
+    vk::CommandBuffer computeCommandBuffer;
+    vk::CommandBuffer uploadCommandBuffer;
 
     vk::Semaphore swapchainSemaphore;
     vk::Semaphore renderSemaphore;
@@ -75,7 +77,7 @@ struct Pipeline {
     vk::DescriptorSetLayout descriptorLayout;
 };
 
-struct ProjectData {
+struct ProjectionData {
     glm::mat4 view;
     glm::mat4 proj;
     glm::mat4 viewproj;

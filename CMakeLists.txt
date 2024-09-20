@@ -18,7 +18,9 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/device/device.cpp
         source/vkcommon.cpp
         source/device/resources.h
-        source/device/device.hpp)
+        source/device/device.hpp
+        source/meshes/meshes.h
+        source/meshes/meshes.cpp)
 
 if (WIN32)
 

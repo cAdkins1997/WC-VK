@@ -3,9 +3,13 @@
 #include "vkinit.h"
 #include <iostream>
 
-#include "device/resources.h"
+#include "device/device.hpp";
 
-namespace wcvk {
+namespace wcvk::core {
+    class Device;
+}
+
+namespace wcvk::commands {
     struct GraphicsContext {
         explicit GraphicsContext(const vk::CommandBuffer& commandBuffer);
 
@@ -26,7 +30,7 @@ namespace wcvk {
         void set_pipeline(const Pipeline& pipeline);
         void draw();
 
-        Image renderPassImage;
+        Image renderPassImage{};
         vk::CommandBuffer _commandBuffer;
         Pipeline _pipeline;
     };
@@ -48,5 +52,29 @@ namespace wcvk {
 
     struct RaytracingContext {
 
+    };
+
+    struct UploadContext {
+        explicit UploadContext(const vk::CommandBuffer& commandBuffer);
+
+        void begin();
+        void end();
+
+        template<typename T>
+        void upload_buffer(core::Device& device, eastl::span<T> src, Buffer& dst, size_t size) {
+            Buffer stagingBuffer = device.create_buffer(size, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY);
+
+            void* data = stagingBuffer.allocation;
+
+            memcpy(data, src.data(), size);
+
+            vk::BufferCopy copy(0, 0, size);
+            _commandBuffer.copyBuffer(stagingBuffer.buffer, dst.buffer, 1, &copy);
+        }
+
+        void upload_texture();
+
+        vk::CommandBuffer _commandBuffer;
+        Pipeline _pipeline;
     };
 }

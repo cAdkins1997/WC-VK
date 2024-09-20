@@ -1,7 +1,7 @@
 
 #include "context.h"
 
-namespace wcvk {
+namespace wcvk::commands {
     GraphicsContext::GraphicsContext(const vk::CommandBuffer& commandBuffer) : _commandBuffer(commandBuffer) {}
 
     void GraphicsContext::begin() {
@@ -226,5 +226,17 @@ namespace wcvk {
 
     void ComputeContext::dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) {
         _commandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);
-    };
+    }
+
+    UploadContext::UploadContext(const vk::CommandBuffer &commandBuffer) : _commandBuffer(commandBuffer) {}
+
+    void UploadContext::begin() {
+        _commandBuffer.reset();
+        vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        assert(_commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to begin upload buffer\n");
+    }
+
+    void UploadContext::end() {
+        _commandBuffer.end();
+    }
 }

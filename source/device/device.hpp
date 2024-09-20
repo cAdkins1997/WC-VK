@@ -6,8 +6,20 @@
 #include <fstream>
 #include <VkBootstrap.h>
 #include <EASTL/vector.h>
+#include <EASTL/string.h>
+#include <EASTL/optional.h>
+#include <EASTL/shared_ptr.h>
+#include <EASTL/span.h>
+#include <fastgltf/core.hpp>
 
-namespace wcvk {
+namespace wcvk::commands {
+    struct GraphicsContext;
+    struct ComputeContext;
+    struct RaytracingContext;
+    struct UploadContext;
+}
+
+namespace wcvk::core {
 
 #ifdef NDEBUG
     static constexpr bool enableValidationLayers = false;
@@ -20,13 +32,14 @@ namespace wcvk {
     class Device {
 
     public:
-        Buffer* create_buffer();
+        [[nodiscard]] Buffer create_buffer(size_t allocSize, vk::BufferUsageFlags usage, VmaMemoryUsage memoryUsage) const;
         [[nodiscard]] Image* create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped);
         Shader create_shader(const char* filePath) const;
 
-        void submit_graphics_work(const GraphicsContext& context);
-        void submit_compute_work(const ComputeContext& context);
-        void submit_raytracing_work(RaytracingContext& context);
+        void submit_graphics_work(const commands::GraphicsContext& context);
+        void submit_compute_work(const commands::ComputeContext& context);
+        void submit_raytracing_work(commands::RaytracingContext& context);
+        void submit_upload_work(commands::UploadContext& context);
 
         void wait_on_work();
         void present();

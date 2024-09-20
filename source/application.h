@@ -24,7 +24,7 @@ namespace wcvk {
         Pipeline trianglePipeline;
 
     private:
-        Device device;
+        core::Device device;
     };
 }
 

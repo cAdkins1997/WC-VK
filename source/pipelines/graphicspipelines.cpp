@@ -42,8 +42,8 @@ vk::Pipeline PipelineBuilder::build_pipeline(vk::Device device) {
 
 void PipelineBuilder::set_shader(vk::ShaderModule vertexShader, vk::ShaderModule fragmentShader) {
     shaderStages.clear();
-    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, vertexShader));
-    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, fragmentShader));
+    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, vertexShader, "main"));
+    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, fragmentShader, "main"));
 }
 
 void PipelineBuilder::set_input_topology(vk::PrimitiveTopology topology) {
