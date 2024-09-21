@@ -15,13 +15,14 @@ struct FrameData {
 
     vk::Semaphore swapchainSemaphore;
     vk::Semaphore renderSemaphore;
+    vk::Semaphore computeSemaphore;
     vk::Fence renderFence;
 
     DescriptorAllocator frameDescriptors;
 };
 
 struct Buffer {
-    vk::Buffer buffer;
+    VkBuffer buffer;
     VmaAllocation allocation;
     VmaAllocationInfo info;
 };

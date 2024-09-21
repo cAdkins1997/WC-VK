@@ -2,12 +2,12 @@
 #include "device.hpp"
 
 namespace wcvk::core {
-    Buffer Device::create_buffer(size_t allocSize, vk::BufferUsageFlags usage, VmaMemoryUsage memoryUsage) const {
+    Buffer Device::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) const {
         VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         bufferInfo.pNext = nullptr;
         bufferInfo.size = allocSize;
 
-        const auto bufferUsage = static_cast<VkBufferUsageFlags>(usage);
+        const auto bufferUsage = usage;
         bufferInfo.usage = bufferUsage;
 
         VmaAllocationCreateInfo vmaallocInfo = {};
@@ -15,8 +15,7 @@ namespace wcvk::core {
         vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         Buffer newBuffer;
 
-        auto vmaBuffer = static_cast<VkBuffer>(newBuffer.buffer);
-        vmaCreateBuffer(allocator, &bufferInfo, &vmaallocInfo, &vmaBuffer, &newBuffer.allocation, &newBuffer.info);
+        vmaCreateBuffer(allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
 
         return newBuffer;
     }
@@ -63,7 +62,7 @@ namespace wcvk::core {
     Shader Device::create_shader(const char* filePath) const {
         std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
-        assert(file.is_open() && "failed to open file\n");
+        file.is_open() && "failed to open file\n";
 
         size_t fileSize = static_cast<size_t>(file.tellg());
 
@@ -78,20 +77,20 @@ namespace wcvk::core {
         shaderCI.pCode = buffer.data();
 
         vk::ShaderModule shaderModule;
-        assert(device.createShaderModule(&shaderCI, nullptr, &shaderModule) == vk::Result::eSuccess && "Failed to create shader module");
+        device.createShaderModule(&shaderCI, nullptr, &shaderModule) == vk::Result::eSuccess && "Failed to create shader module";
         const Shader shader { shaderModule };
         return shader;
     }
 
-    void Device::submit_graphics_work(const commands::GraphicsContext &graphicsContext) {
+    void Device::submit_graphics_work(const commands::GraphicsContext &graphicsContext, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal) {
         vk::CommandBuffer cmd = graphicsContext._commandBuffer ;
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();
         vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
-        waitInfo.stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        waitInfo.stageMask = wait;
         vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
-        signalInfo.stageMask = vk::PipelineStageFlagBits2::eAllGraphics;
+        signalInfo.stageMask = signal;
         vk::SubmitFlagBits submitFlags{};
         vk::SubmitInfo2 submitInfo(
             submitFlags,
@@ -101,33 +100,33 @@ namespace wcvk::core {
         graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
     }
 
-    void Device::submit_compute_work(const commands::ComputeContext &context) {
+    void Device::submit_compute_work(const commands::ComputeContext &context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal) {
         vk::CommandBuffer cmd = context._commandBuffer ;
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();
-        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
-        waitInfo.stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.computeSemaphore);
+        waitInfo.stageMask = wait;
         vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
-        signalInfo.stageMask = vk::PipelineStageFlagBits2::eAllGraphics;
+        signalInfo.stageMask = signal;
         vk::SubmitFlagBits submitFlags{};
         vk::SubmitInfo2 submitInfo(
             submitFlags,
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-        assert(graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence) == vk::Result::eSuccess && "Failed to submit to submit queue\n");
+        graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
     }
 
-    void Device::submit_upload_work(commands::UploadContext &context) {
+    void Device::submit_upload_work(const commands::UploadContext &context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal) {
         vk::CommandBuffer cmd = context._commandBuffer ;
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();
-        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
-        waitInfo.stageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-        vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
-        signalInfo.stageMask = vk::PipelineStageFlagBits2::eAllGraphics;
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.renderSemaphore);
+        waitInfo.stageMask = wait;
+        vk::SemaphoreSubmitInfo signalInfo(currentFrame.swapchainSemaphore);
+        signalInfo.stageMask = signal;
         vk::SubmitFlagBits submitFlags{};
         vk::SubmitInfo2 submitInfo(
             submitFlags,
@@ -139,13 +138,20 @@ namespace wcvk::core {
 
     void Device::wait_on_work() {
         device.waitForFences(1, &get_current_frame().renderFence, true, 1000000000);
+    }
+
+    void Device::reset_fences() {
         device.resetFences(1, &get_current_frame().renderFence);
     }
 
     void Device::present() {
         FrameData& currentFrame = get_current_frame();
         vk::PresentInfoKHR presentInfo(1, &currentFrame.renderSemaphore, 1, &swapchain, &swapchainImageIndex);
-        graphicsQueue.presentKHR(&presentInfo);
+        auto result = graphicsQueue.presentKHR(&presentInfo);
+        if (result == vk::Result::eErrorOutOfDateKHR) {
+            resizeRequested = true;
+            return;
+        }
         frameNumber++;
     }
 
@@ -158,6 +164,11 @@ namespace wcvk::core {
     }
 
     Device::Device() {
+
+        if constexpr (wcvk::core::enableValidationLayers == true) {
+            std::cout << "\nvalidation layers enabled\n";
+        }
+
         glfwInit();
         if (glfwVulkanSupported()) {
             uint32_t count;
@@ -203,12 +214,6 @@ namespace wcvk::core {
                 set_required_features_12(features12).
                 set_required_features_13(features13).
                 select();
-
-            physical_device_selector_ret->enable_extension_if_present("VK_EXT_descriptor_buffer");
-            auto extensionsPossible = physical_device_selector_ret->get_extensions();
-            for (const auto& extension : extensionsPossible) {
-                std::cout << extension;
-            }
 
             surface = vk::SurfaceKHR(tempSurface);
 
@@ -272,18 +277,19 @@ namespace wcvk::core {
             device.destroyFence(frame.renderFence);
             device.destroySemaphore(frame.renderSemaphore);
             device.destroySemaphore(frame.swapchainSemaphore);
+            device.destroySemaphore(frame.computeSemaphore);
         }
 
         vmaDestroyImage(allocator, drawImage.image, nullptr);
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-        vkDestroySurfaceKHR(instance, surface, nullptr);
+        device.destroyImageView(drawImage.imageView, nullptr);
+        device.destroySwapchainKHR(swapchain, nullptr);
+        instance.destroy(surface);
 
         vmaDestroyAllocator(allocator);
-        vkDestroyDevice(device, nullptr);
+        device.destroy();
 
         glfwDestroyWindow(window);
-
-        vkDestroyInstance(instance, nullptr);
+        instance.destroy();
 
         glfwTerminate();
     }
@@ -294,7 +300,7 @@ namespace wcvk::core {
             frames[i].commandPool = device.createCommandPool(commandPoolCI, nullptr);
             vk::CommandBufferAllocateInfo commandBufferAI(frames[i].commandPool, vk::CommandBufferLevel::ePrimary, 1);
             device.allocateCommandBuffers(&commandBufferAI, &frames[i].graphicsCommandBuffer);
-            device.allocateCommandBuffers(&commandBufferAI, &frames[i].graphicsCommandBuffer);
+            device.allocateCommandBuffers(&commandBufferAI, &frames[i].computeCommandBuffer);
             device.allocateCommandBuffers(&commandBufferAI, &frames[i].uploadCommandBuffer);
         }
     }
@@ -307,6 +313,7 @@ namespace wcvk::core {
             device.createFence(&fenceCI, nullptr, &frames[i].renderFence);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].swapchainSemaphore);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].renderSemaphore);
+            device.createSemaphore(&semaphoreCI, nullptr, &frames[i].computeSemaphore);
         }
     }
 

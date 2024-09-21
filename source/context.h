@@ -24,13 +24,12 @@ namespace wcvk::commands {
             VkPipelineStageFlags2 dstStageFlags, VkAccessFlags2 dstAccessMask);
         void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout);
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
-        void set_up_render_pass(const Image& drawImage);
-        void set_viewport(uint32_t x, uint32_t y, float mindDepth, float maxDepth);
+        void set_up_render_pass(vk::Extent2D extent, const vk::RenderingAttachmentInfo *drawImage, const vk::RenderingAttachmentInfo *depthImage) const;
+        void set_viewport(float x, float y, float minDepth, float maxDepth);
         void set_scissor(uint32_t x, uint32_t y);
         void set_pipeline(const Pipeline& pipeline);
         void draw();
 
-        Image renderPassImage{};
         vk::CommandBuffer _commandBuffer;
         Pipeline _pipeline;
     };
@@ -62,7 +61,7 @@ namespace wcvk::commands {
 
         template<typename T>
         void upload_buffer(core::Device& device, eastl::span<T> src, Buffer& dst, size_t size) {
-            Buffer stagingBuffer = device.create_buffer(size, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_CPU_ONLY);
+            Buffer stagingBuffer = device.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
             void* data = stagingBuffer.allocation;
 

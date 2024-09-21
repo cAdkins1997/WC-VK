@@ -12,6 +12,7 @@ vk::Pipeline PipelineBuilder::build_pipeline(vk::Device device) {
 
     vk::PipelineColorBlendStateCreateInfo colorBlending;
     colorBlending.logicOpEnable = vk::False;
+
     colorBlending.logicOp = vk::LogicOp::eCopy;
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
@@ -31,7 +32,7 @@ vk::Pipeline PipelineBuilder::build_pipeline(vk::Device device) {
     pipelineCI.pDepthStencilState = &depthStencil;
     pipelineCI.layout = pipelineLayout;
 
-    vk::DynamicState state[]{};
+    vk::DynamicState state[]{ vk::DynamicState::eViewport, vk::DynamicState::eScissor };
     vk::PipelineDynamicStateCreateInfo dynamicInfo;
     dynamicInfo.pDynamicStates = &state[0];
     dynamicInfo.dynamicStateCount = 2;
@@ -42,8 +43,8 @@ vk::Pipeline PipelineBuilder::build_pipeline(vk::Device device) {
 
 void PipelineBuilder::set_shader(vk::ShaderModule vertexShader, vk::ShaderModule fragmentShader) {
     shaderStages.clear();
-    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, vertexShader, "main"));
     shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, fragmentShader, "main"));
+    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, vertexShader, "main"));
 }
 
 void PipelineBuilder::set_input_topology(vk::PrimitiveTopology topology) {

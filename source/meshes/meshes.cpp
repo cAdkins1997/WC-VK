@@ -2,7 +2,7 @@
 
 namespace wcvk::meshes {
     MeshBuffer upload_mesh(core::Device device, commands::UploadContext& context, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices) {
-        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+        /*const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
         const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
         MeshBuffer newSurface;
@@ -23,8 +23,8 @@ namespace wcvk::meshes {
         context.upload_buffer(device, indices, newSurface.indexBuffer, indexBufferSize);
         context.end();
 
-        device.submit_upload_work(context);
+        //device.submit_upload_work(context);
 
-        return newSurface;
+        return newSurface;*/
     }
 }

@@ -7,7 +7,7 @@ namespace wcvk::commands {
     void GraphicsContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        assert(_commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end graphics command buffer\n");
+        _commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end graphics command buffer\n";
     }
 
     void GraphicsContext::end() {
@@ -113,32 +113,38 @@ namespace wcvk::commands {
         _commandBuffer.blitImage2(&blitInfo);
     }
 
-    void GraphicsContext::set_up_render_pass(const Image &drawImage) {
-        renderPassImage = drawImage;
-        vk::RenderingAttachmentInfo colorAttachment(renderPassImage.imageView, vk::ImageLayout::eColorAttachmentOptimal);
-        vk::RenderingInfo renderInfo({}, { renderPassImage.imageExtent.height, renderPassImage.imageExtent.width});
-        renderInfo.pColorAttachments = &colorAttachment;
+    void GraphicsContext::set_up_render_pass(vk::Extent2D extent, const vk::RenderingAttachmentInfo *drawImage, const vk::RenderingAttachmentInfo *depthImage) const {
+        vk::Rect2D renderArea;
+        renderArea.extent = extent;
+        vk::RenderingInfo renderInfo;
+        renderInfo.renderArea = renderArea;
+        renderInfo.pColorAttachments = drawImage;
+        renderInfo.pDepthAttachment = depthImage;
+        renderInfo.layerCount = 1;
+        renderInfo.colorAttachmentCount = 1;
         _commandBuffer.beginRendering(&renderInfo);
     }
 
-    void GraphicsContext::set_viewport(uint32_t x, uint32_t y, float mindDepth, float maxDepth) {
-        vk::Viewport viewport(0, 0, renderPassImage.imageExtent.width, renderPassImage.imageExtent.height);
-        viewport.minDepth = 0.f;
-        viewport.maxDepth = 1.f;
+    void GraphicsContext::set_viewport(float x, float y, float minDepth, float maxDepth) {
+        vk::Viewport viewport(0, 0, x, y);
+        viewport.minDepth = minDepth;
+        viewport.maxDepth = maxDepth;
         _commandBuffer.setViewport(0, 1, &viewport);
     }
 
     void GraphicsContext::set_scissor(uint32_t x, uint32_t y) {
         vk::Rect2D scissor;
-        vk::Extent2D extent {renderPassImage.imageExtent.width, renderPassImage.imageExtent.height};
+        vk::Extent2D extent {x, y};
         scissor.extent = extent;
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
         _commandBuffer.setScissor(0, 1, &scissor);
     }
 
     void GraphicsContext::set_pipeline(const Pipeline &pipeline) {
         _pipeline = pipeline;
-        _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
-        _commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, _pipeline.pipeline);
+        _commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.pipeline);
+        _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
     }
 
     void GraphicsContext::draw() {
@@ -151,7 +157,7 @@ namespace wcvk::commands {
     void ComputeContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        assert(_commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end compute command buffer\n");
+        _commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end compute command buffer\n";
     }
 
     void ComputeContext::end() {
@@ -233,7 +239,7 @@ namespace wcvk::commands {
     void UploadContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        assert(_commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to begin upload buffer\n");
+        _commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to begin upload buffer\n";
     }
 
     void UploadContext::end() {
