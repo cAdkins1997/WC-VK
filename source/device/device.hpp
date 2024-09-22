@@ -45,8 +45,8 @@ namespace wcvk::core {
         void reset_fences();
         void present();
 
+        Image& get_draw_image() { return drawImage; }
         VkImage& get_swapchain_image();
-        VkImage& get_draw_image();
 
     public:
         Device();
@@ -60,7 +60,7 @@ namespace wcvk::core {
         vk::Instance instance;
         vk::DebugUtilsMessengerEXT debugMessenger;
 
-        uint32_t width = 1920, height = 1080;
+        uint32_t width = 3840, height = 2160;
         GLFWwindow* window;
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;

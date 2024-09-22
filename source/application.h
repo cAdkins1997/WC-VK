@@ -23,6 +23,10 @@ namespace wcvk {
         Pipeline drawImagePipeline;
         Pipeline trianglePipeline;
 
+        Image drawImage;
+        VkImage drawHandle;
+        vk::Extent2D drawImageExtent;
+
     private:
         core::Device device;
     };

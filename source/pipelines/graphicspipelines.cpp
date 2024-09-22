@@ -91,4 +91,9 @@ void PipelineBuilder::disable_depthtest() {
     depthStencil.maxDepthBounds = 1.f;
 }
 
+void PipelineBuilder::disable_blending() {
+    colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    colorBlendAttachment.blendEnable = vk::False;
+}
+
 

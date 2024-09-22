@@ -35,6 +35,15 @@ struct Image {
     vk::Format imageFormat;
     vk::Sampler sampler;
     size_t handle;
+
+    [[nodiscard]] VkImage get_handle() const { return image; }
+    [[nodiscard]] vk::ImageView get_view() const { return imageView; }
+    [[nodiscard]] VmaAllocation get_allocation() const { return allocation; }
+    [[nodiscard]] vk::Extent3D get_extent() const { return imageExtent; }
+    [[nodiscard]] uint32_t get_width() const { return imageExtent.width; }
+    [[nodiscard]] uint32_t get_height() const { return imageExtent.height; }
+    [[nodiscard]] vk::Format get_format() const { return imageFormat; }
+    [[nodiscard]] vk::Sampler get_sampler() const { return sampler; }
 };
 
 struct Vertex {

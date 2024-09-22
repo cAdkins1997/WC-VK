@@ -18,6 +18,7 @@ public:
     void set_color_attachment_format(vk::Format format);
     void set_depth_format(vk::Format format);
     void disable_depthtest();
+    void disable_blending();
 
     eastl::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
 

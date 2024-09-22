@@ -26,8 +26,10 @@ namespace wcvk::commands {
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
         void set_up_render_pass(vk::Extent2D extent, const vk::RenderingAttachmentInfo *drawImage, const vk::RenderingAttachmentInfo *depthImage) const;
         void set_viewport(float x, float y, float minDepth, float maxDepth);
+        void set_viewport(vk::Extent2D extent, float minDepth, float maxDepth);
         void set_scissor(uint32_t x, uint32_t y);
-        void set_pipeline(const Pipeline& pipeline);
+        void set_scissor(vk::Extent2D extent);
+        void bind_pipeline(const Pipeline& pipeline);
         void draw();
 
         vk::CommandBuffer _commandBuffer;
@@ -42,7 +44,7 @@ namespace wcvk::commands {
         void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout);
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
         void resource_barrier();
-        void set_pipeline(const Pipeline& pipeline);
+        void bind_pipeline(const Pipeline& pipeline);
         void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ);
 
         vk::CommandBuffer _commandBuffer;

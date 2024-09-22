@@ -138,6 +138,7 @@ namespace wcvk::core {
 
     void Device::wait_on_work() {
         device.waitForFences(1, &get_current_frame().renderFence, true, 1000000000);
+        device.resetFences(1, &get_current_frame().renderFence);
     }
 
     void Device::reset_fences() {
@@ -157,10 +158,6 @@ namespace wcvk::core {
 
     VkImage& Device::get_swapchain_image() {
         return swapchainImages[get_swapchain_image_index()];
-    }
-
-    VkImage& Device::get_draw_image() {
-        return drawImage.image;
     }
 
     Device::Device() {

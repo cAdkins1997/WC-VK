@@ -132,6 +132,13 @@ namespace wcvk::commands {
         _commandBuffer.setViewport(0, 1, &viewport);
     }
 
+    void GraphicsContext::set_viewport(vk::Extent2D extent, float minDepth, float maxDepth) {
+        vk::Viewport viewport(0, 0, extent.width, extent.height);
+        viewport.minDepth = minDepth;
+        viewport.maxDepth = maxDepth;
+        _commandBuffer.setViewport(0, 1, &viewport);
+    }
+
     void GraphicsContext::set_scissor(uint32_t x, uint32_t y) {
         vk::Rect2D scissor;
         vk::Extent2D extent {x, y};
@@ -141,7 +148,15 @@ namespace wcvk::commands {
         _commandBuffer.setScissor(0, 1, &scissor);
     }
 
-    void GraphicsContext::set_pipeline(const Pipeline &pipeline) {
+    void GraphicsContext::set_scissor(vk::Extent2D extent) {
+        vk::Rect2D scissor;
+        scissor.extent = extent;
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        _commandBuffer.setScissor(0, 1, &scissor);
+    }
+
+    void GraphicsContext::bind_pipeline(const Pipeline &pipeline) {
         _pipeline = pipeline;
         _commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.pipeline);
         _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
@@ -224,7 +239,7 @@ namespace wcvk::commands {
         _commandBuffer.blitImage2(&blitInfo);
     }
 
-    void ComputeContext::set_pipeline(const Pipeline &pipeline) {
+    void ComputeContext::bind_pipeline(const Pipeline &pipeline) {
         _pipeline = pipeline;
         _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
         _commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, _pipeline.pipeline);
