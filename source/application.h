@@ -27,6 +27,8 @@ namespace wcvk {
         VkImage drawHandle;
         vk::Extent2D drawImageExtent;
 
+        eastl::optional<eastl::vector<eastl::shared_ptr<Mesh>>> load_GLTF_meshs(const char* path);
+
     private:
         core::Device device;
     };

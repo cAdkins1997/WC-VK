@@ -79,7 +79,7 @@ namespace wcvk::commands {
         _commandBuffer.pipelineBarrier2(&dependencyInfo);
     }
 
-    void GraphicsContext::copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {\
+    void GraphicsContext::copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {
         vk::ImageBlit2 blitRegion;
 
         blitRegion.srcOffsets[1].x = srcSize.width;
@@ -260,4 +260,45 @@ namespace wcvk::commands {
     void UploadContext::end() {
         _commandBuffer.end();
     }
+
+    /*MeshBuffer UploadContext::upload_mesh(Buffer vertexBuffer, Buffer indexBuffer, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices, vk::DeviceAddress deviceAddress) {
+        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+        const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+
+        MeshBuffer newSurface;
+
+        vk::BufferDeviceAddressInfo deviceAddressInfo;
+        newSurface.deviceAddress = deviceAddress;
+        newSurface.vertexBuffer = vertexBuffer;
+        newSurface.indexBuffer = indexBuffer;
+
+        upload_buffer()
+    }
+
+
+    MeshBuffer UploadContext::upload_mesh(core::Device &device, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices) {
+        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+        const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+
+        MeshBuffer newSurface;
+
+        newSurface.vertexBuffer = device.create_buffer(
+            vertexBufferSize,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            VMA_MEMORY_USAGE_GPU_ONLY
+        );
+
+        vk::BufferDeviceAddressInfo deviceAddressInfo;
+        newSurface.deviceAddress = device.device.getBufferAddress(&deviceAddressInfo);
+
+        newSurface.indexBuffer = device.create_buffer(indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst, VMA_MEMORY_USAGE_GPU_ONLY);
+
+        UploadContext context()
+
+        upload_buffer(device, vertices, newSurface.vertexBuffer, vertexBufferSize);
+        upload_buffer(device, indices, newSurface.indexBuffer, indexBufferSize);
+        end();
+
+        return newSurface;
+    }*/
 }

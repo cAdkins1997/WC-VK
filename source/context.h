@@ -73,6 +73,8 @@ namespace wcvk::commands {
             _commandBuffer.copyBuffer(stagingBuffer.buffer, dst.buffer, 1, &copy);
         }
 
+        MeshBuffer upload_mesh(Buffer vertexBuffer, Buffer indexBuffer, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices, vk::DeviceAddress deviceAddress);
+
         void upload_texture();
 
         vk::CommandBuffer _commandBuffer;

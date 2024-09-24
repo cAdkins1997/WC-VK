@@ -73,8 +73,8 @@ namespace wcvk {
         device.get_handle().destroyShaderModule(compShader.module);
 
         while (!glfwWindowShouldClose(device.window)) {
-            draw();
             glfwPollEvents();
+            draw();
         }
     }
 
@@ -87,17 +87,19 @@ namespace wcvk {
             return;
         }
 
-        commands::ComputeContext computeContext(currentFrame.graphicsCommandBuffer);
+        commands::ComputeContext computeContext(currentFrame.computeCommandBuffer);
         computeContext.begin();
         computeContext.bind_pipeline(drawImagePipeline);
         computeContext.image_barrier(drawHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
         computeContext.dispatch(std::ceil(device.width), std::ceil(device.height), 1);
+        computeContext.end();
 
         commands::GraphicsContext graphicsContext(currentFrame.graphicsCommandBuffer);
+        graphicsContext.begin();
         graphicsContext.bind_pipeline(trianglePipeline);
 
         graphicsContext.image_barrier(drawHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
-        vk::RenderingAttachmentInfo drawAttachment(device.drawImage.imageView, vk::ImageLayout::eColorAttachmentOptimal);
+        vk::RenderingAttachmentInfo drawAttachment(drawImage.imageView, vk::ImageLayout::eColorAttachmentOptimal);
 
         graphicsContext.set_up_render_pass(drawImageExtent, &drawAttachment, nullptr);
         graphicsContext.bind_pipeline(trianglePipeline);
@@ -107,11 +109,12 @@ namespace wcvk {
 
         graphicsContext.image_barrier(drawHandle, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal);
         graphicsContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
-        graphicsContext.copy_image(drawHandle, currentSwapchainImage, {device.width, device.height}, {device.width, device.height});
+        graphicsContext.copy_image(drawHandle, currentSwapchainImage, drawImageExtent, drawImageExtent);
         graphicsContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR);
         graphicsContext.end();
 
-        device.submit_graphics_work(graphicsContext, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::PipelineStageFlagBits2::eAllGraphics);
+        device.submit_compute_work(computeContext, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::PipelineStageFlagBits2::eComputeShader);
+        device.submit_graphics_work(graphicsContext, vk::PipelineStageFlagBits2::eComputeShader, vk::PipelineStageFlagBits2::eAllGraphics);
 
         device.present();
     }
@@ -161,5 +164,9 @@ namespace wcvk {
             writer.write_image(0, device.drawImage.imageView, nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
             writer.update_set(device.device, trianglePipeline.set);
         }
+    }
+
+    eastl::optional<eastl::vector<eastl::shared_ptr<Mesh>>> Application::load_GLTF_meshs(const char *path) {
+
     }
 }

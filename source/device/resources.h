@@ -17,6 +17,7 @@ struct FrameData {
     vk::Semaphore renderSemaphore;
     vk::Semaphore computeSemaphore;
     vk::Fence renderFence;
+    vk::Fence computeFence;
 
     DescriptorAllocator frameDescriptors;
 };

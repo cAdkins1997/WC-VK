@@ -87,7 +87,7 @@ namespace wcvk::core {
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();
-        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.computeSemaphore);
         waitInfo.stageMask = wait;
         vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
         signalInfo.stageMask = signal;
@@ -105,9 +105,9 @@ namespace wcvk::core {
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();
-        vk::SemaphoreSubmitInfo waitInfo(currentFrame.computeSemaphore);
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
         waitInfo.stageMask = wait;
-        vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
+        vk::SemaphoreSubmitInfo signalInfo(currentFrame.computeSemaphore);
         signalInfo.stageMask = signal;
         vk::SubmitFlagBits submitFlags{};
         vk::SubmitInfo2 submitInfo(
@@ -115,7 +115,7 @@ namespace wcvk::core {
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-        graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
+        graphicsQueue.submit2( 1, &submitInfo, currentFrame.computeFence);
     }
 
     void Device::submit_upload_work(const commands::UploadContext &context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal) {
@@ -137,12 +137,14 @@ namespace wcvk::core {
     }
 
     void Device::wait_on_work() {
-        device.waitForFences(1, &get_current_frame().renderFence, true, 1000000000);
-        device.resetFences(1, &get_current_frame().renderFence);
+        vk::Fence fences[] {get_current_frame().renderFence, get_current_frame().computeFence };
+        device.waitForFences(2, fences, true, 1000000000);
+        device.resetFences(2, fences);
     }
 
     void Device::reset_fences() {
-        device.resetFences(1, &get_current_frame().renderFence);
+        vk::Fence fences[] {get_current_frame().renderFence, get_current_frame().computeFence };
+        device.resetFences(2, fences);
     }
 
     void Device::present() {
@@ -171,9 +173,16 @@ namespace wcvk::core {
             uint32_t count;
             const char** extensions = glfwGetRequiredInstanceExtensions(&count);
 
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+            glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+            glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+            glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-            window = glfwCreateWindow(width, height, "Window Title", nullptr, nullptr);
+
+            window = glfwCreateWindow(mode->width, mode->height, "Window Title", monitor, nullptr);
 
             vkb::InstanceBuilder builder;
             auto instantRet = builder.set_app_name("WCVK")
@@ -308,6 +317,7 @@ namespace wcvk::core {
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             device.createFence(&fenceCI, nullptr, &frames[i].renderFence);
+            device.createFence(&fenceCI, nullptr, &frames[i].computeFence);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].swapchainSemaphore);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].renderSemaphore);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].computeSemaphore);
