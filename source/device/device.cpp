@@ -133,13 +133,39 @@ namespace wcvk::core {
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-        graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
+        graphicsQueue.submit2( 1, &submitInfo, currentFrame.uploadFence);
+    }
+
+    void Device::submit_upload_work(const commands::UploadContext &context) {
+        device.resetFences(1, &immediateFence);
+        immediateCommandBuffer.reset({});
+
+        vk::CommandBufferSubmitInfo commandBufferSI(immediateCommandBuffer);
+        vk::SubmitInfo2 submitInfo({}, nullptr, nullptr);
+        graphicsQueue.submit2(1, &submitInfo, immediateFence);
+        device.waitForFences(1, &immediateFence, true, 1000000000);
+    }
+
+    void Device::submit_immediate_work(eastl::function<void(VkCommandBuffer cmd)> &&function) {
+        device.resetFences(1, &immediateFence);
+        immediateCommandBuffer.reset({});
+
+        vk::CommandBufferBeginInfo commandBufferBI(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        immediateCommandBuffer.begin(&commandBufferBI);
+
+        function(immediateCommandBuffer);
+        immediateCommandBuffer.end();
+
+        vk::CommandBufferSubmitInfo commandBufferSI(immediateCommandBuffer);
+        vk::SubmitInfo2 submitInfo({}, nullptr, nullptr);
+        graphicsQueue.submit2(1, &submitInfo, immediateFence);
+        device.waitForFences(1, &immediateFence, true, 1000000000);
     }
 
     void Device::wait_on_work() {
-        vk::Fence fences[] {get_current_frame().renderFence, get_current_frame().computeFence };
-        device.waitForFences(2, fences, true, 1000000000);
-        device.resetFences(2, fences);
+        vk::Fence fences[] {get_current_frame().renderFence, get_current_frame().computeFence, get_current_frame().uploadFence, immediateFence};
+        device.waitForFences(4, fences, true, 1000000000);
+        device.resetFences(4, fences);
     }
 
     void Device::reset_fences() {
@@ -182,7 +208,7 @@ namespace wcvk::core {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-            window = glfwCreateWindow(mode->width, mode->height, "Window Title", monitor, nullptr);
+            window = glfwCreateWindow(width, height, "Window Title", nullptr, nullptr);
 
             vkb::InstanceBuilder builder;
             auto instantRet = builder.set_app_name("WCVK")
@@ -309,6 +335,13 @@ namespace wcvk::core {
             device.allocateCommandBuffers(&commandBufferAI, &frames[i].computeCommandBuffer);
             device.allocateCommandBuffers(&commandBufferAI, &frames[i].uploadCommandBuffer);
         }
+
+        {
+            immediateCommandPool = device.createCommandPool(commandPoolCI, nullptr);
+
+            vk::CommandBufferAllocateInfo commandBufferAI(immediateCommandPool, vk::CommandBufferLevel::ePrimary, 1);
+            device.allocateCommandBuffers(&commandBufferAI, &immediateCommandBuffer);
+        }
     }
 
     void Device::init_sync_objects() {
@@ -318,10 +351,13 @@ namespace wcvk::core {
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             device.createFence(&fenceCI, nullptr, &frames[i].renderFence);
             device.createFence(&fenceCI, nullptr, &frames[i].computeFence);
+            device.createFence(&fenceCI, nullptr, &frames[i].uploadFence);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].swapchainSemaphore);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].renderSemaphore);
             device.createSemaphore(&semaphoreCI, nullptr, &frames[i].computeSemaphore);
         }
+
+        device.createFence(&fenceCI, nullptr, &immediateFence);
     }
 
     void Device::init_allocator() {

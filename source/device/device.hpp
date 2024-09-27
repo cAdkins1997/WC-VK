@@ -10,6 +10,7 @@
 #include <EASTL/optional.h>
 #include <EASTL/shared_ptr.h>
 #include <EASTL/span.h>
+#include <EASTL/functional.h>
 #include <fastgltf/core.hpp>
 
 namespace wcvk::commands {
@@ -40,6 +41,9 @@ namespace wcvk::core {
         void submit_compute_work(const commands::ComputeContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
         void submit_raytracing_work(commands::RaytracingContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
         void submit_upload_work(const commands::UploadContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
+        void submit_upload_work(const commands::UploadContext& context);
+
+        void submit_immediate_work(eastl::function<void(VkCommandBuffer cmd)>&& function);
 
         void wait_on_work();
         void reset_fences();
@@ -60,7 +64,7 @@ namespace wcvk::core {
         vk::Instance instance;
         vk::DebugUtilsMessengerEXT debugMessenger;
 
-        uint32_t width = 3840, height = 2160;
+        uint32_t width = 1920, height = 1080;
         GLFWwindow* window;
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;
@@ -82,6 +86,10 @@ namespace wcvk::core {
         VmaAllocator allocator{};
 
         eastl::vector<Image> images;
+
+        vk::Fence immediateFence;
+        vk::CommandPool immediateCommandPool;
+        vk::CommandBuffer immediateCommandBuffer;
 
         FrameData& get_current_frame() { return frames[frameNumber % MAX_FRAMES_IN_FLIGHT]; };
         uint32_t get_swapchain_image_index() {

@@ -31,6 +31,10 @@ namespace wcvk {
 
     private:
         core::Device device;
+
+        MeshBuffer meshBuffer{};
+        size_t vertSize;
+        size_t indexSize;
     };
 }
 

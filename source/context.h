@@ -3,7 +3,7 @@
 #include "vkinit.h"
 #include <iostream>
 
-#include "device/device.hpp";
+#include "device/device.hpp"
 
 namespace wcvk::core {
     class Device;
@@ -30,6 +30,13 @@ namespace wcvk::commands {
         void set_scissor(uint32_t x, uint32_t y);
         void set_scissor(vk::Extent2D extent);
         void bind_pipeline(const Pipeline& pipeline);
+        void bind_index_buffer(vk::Buffer indexBuffer);
+
+        template<typename T>
+        void set_push_constants(const vk::ShaderStageFlags shaderStage, T* pushConstants) {
+            _commandBuffer.pushConstants(_pipeline.pipelineLayout, shaderStage, 0, sizeof(T), &pushConstants);
+        }
+
         void draw();
 
         vk::CommandBuffer _commandBuffer;
@@ -56,14 +63,14 @@ namespace wcvk::commands {
     };
 
     struct UploadContext {
-        explicit UploadContext(const vk::CommandBuffer& commandBuffer);
+        explicit UploadContext(const vk::CommandBuffer& commandBuffer, const VmaAllocator& allocator);
 
         void begin();
         void end();
 
         template<typename T>
-        void upload_buffer(core::Device& device, eastl::span<T> src, Buffer& dst, size_t size) {
-            Buffer stagingBuffer = device.create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+        void upload_buffer(eastl::vector<T> src, Buffer& dst, size_t size) {
+            Buffer stagingBuffer = make_staging_buffer(size);
 
             void* data = stagingBuffer.allocation;
 
@@ -73,10 +80,15 @@ namespace wcvk::commands {
             _commandBuffer.copyBuffer(stagingBuffer.buffer, dst.buffer, 1, &copy);
         }
 
-        MeshBuffer upload_mesh(Buffer vertexBuffer, Buffer indexBuffer, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices, vk::DeviceAddress deviceAddress);
+        MeshBuffer upload_mesh(const Buffer &vertexBuffer, const Buffer &indexBuffer, const eastl::vector<uint32_t>& indices, const eastl::vector<Vertex>& vertices, vk::DeviceAddress deviceAddress);
 
         void upload_texture();
 
+    private:
+        Buffer make_staging_buffer(size_t allocSize);
+
+    public:
+        VmaAllocator _allocator{};
         vk::CommandBuffer _commandBuffer;
         Pipeline _pipeline;
     };

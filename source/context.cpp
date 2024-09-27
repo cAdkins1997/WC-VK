@@ -7,7 +7,7 @@ namespace wcvk::commands {
     void GraphicsContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        _commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end graphics command buffer\n";
+        _commandBuffer.begin(&beginInfo);
     }
 
     void GraphicsContext::end() {
@@ -162,6 +162,10 @@ namespace wcvk::commands {
         _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
     }
 
+    void GraphicsContext::bind_index_buffer(vk::Buffer indexBuffer) {
+        _commandBuffer.bindIndexBuffer(indexBuffer, 0, vk::IndexType::eUint32);
+    }
+
     void GraphicsContext::draw() {
         _commandBuffer.draw(3, 1, 0, 0);
         _commandBuffer.endRendering();
@@ -172,7 +176,7 @@ namespace wcvk::commands {
     void ComputeContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        _commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to end compute command buffer\n";
+        _commandBuffer.begin(&beginInfo);
     }
 
     void ComputeContext::end() {
@@ -249,56 +253,46 @@ namespace wcvk::commands {
         _commandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);
     }
 
-    UploadContext::UploadContext(const vk::CommandBuffer &commandBuffer) : _commandBuffer(commandBuffer) {}
+    UploadContext::UploadContext(const vk::CommandBuffer &commandBuffer, const VmaAllocator& allocator) : _allocator(allocator), _commandBuffer(commandBuffer) {}
 
     void UploadContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        _commandBuffer.begin(&beginInfo) == vk::Result::eSuccess && "Failed to begin upload buffer\n";
+        _commandBuffer.begin(&beginInfo);
     }
 
     void UploadContext::end() {
         _commandBuffer.end();
     }
 
-    /*MeshBuffer UploadContext::upload_mesh(Buffer vertexBuffer, Buffer indexBuffer, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices, vk::DeviceAddress deviceAddress) {
-        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
-        const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+    MeshBuffer UploadContext::upload_mesh(const Buffer &vertexBuffer, const Buffer &indexBuffer, const eastl::vector<uint32_t> &indices, const eastl::vector<Vertex> &vertices, vk::DeviceAddress deviceAddress) {
 
-        MeshBuffer newSurface;
+        MeshBuffer newSurface{};
 
-        vk::BufferDeviceAddressInfo deviceAddressInfo;
         newSurface.deviceAddress = deviceAddress;
         newSurface.vertexBuffer = vertexBuffer;
         newSurface.indexBuffer = indexBuffer;
 
-        upload_buffer()
-    }
-
-
-    MeshBuffer UploadContext::upload_mesh(core::Device &device, eastl::span<uint32_t> indices, eastl::span<Vertex> vertices) {
-        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
-        const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
-
-        MeshBuffer newSurface;
-
-        newSurface.vertexBuffer = device.create_buffer(
-            vertexBufferSize,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-            VMA_MEMORY_USAGE_GPU_ONLY
-        );
-
-        vk::BufferDeviceAddressInfo deviceAddressInfo;
-        newSurface.deviceAddress = device.device.getBufferAddress(&deviceAddressInfo);
-
-        newSurface.indexBuffer = device.create_buffer(indexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst, VMA_MEMORY_USAGE_GPU_ONLY);
-
-        UploadContext context()
-
-        upload_buffer(device, vertices, newSurface.vertexBuffer, vertexBufferSize);
-        upload_buffer(device, indices, newSurface.indexBuffer, indexBufferSize);
-        end();
+        upload_buffer(vertices, newSurface.vertexBuffer, vertices.size());
+        upload_buffer(indices, newSurface.indexBuffer, indices.size());
 
         return newSurface;
-    }*/
+    }
+
+    Buffer UploadContext::make_staging_buffer(size_t allocSize) {
+        VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        bufferInfo.pNext = nullptr;
+        bufferInfo.size = allocSize;
+
+        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        Buffer newBuffer;
+
+        vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
+
+        return newBuffer;
+    }
 }
