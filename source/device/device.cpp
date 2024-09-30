@@ -13,7 +13,7 @@ namespace wcvk::core {
         VmaAllocationCreateInfo vmaallocInfo = {};
         vmaallocInfo.usage = memoryUsage;
         vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        Buffer newBuffer;
+        Buffer newBuffer{};
 
         vmaCreateBuffer(allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
 
@@ -56,17 +56,19 @@ namespace wcvk::core {
         newImage.sampler = device.createSampler(samplerCI, nullptr);
 
         images.push_back(newImage);
-        return images.end();
+        return images.end().base();
     }
 
-    Shader Device::create_shader(const char* filePath) const {
-        std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+    Shader Device::create_shader(std::string_view filePath) const {
+        std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
 
-        file.is_open() && "failed to open file\n";
+        if (file.is_open() == false) {
+            throw std::runtime_error("Failed to find file!\n");
+        }
 
         size_t fileSize = static_cast<size_t>(file.tellg());
 
-        eastl::vector<uint32_t> buffer (fileSize / sizeof(uint32_t));
+        std::vector<uint32_t> buffer (fileSize / sizeof(uint32_t));
 
         file.seekg(0);
         file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
@@ -87,7 +89,7 @@ namespace wcvk::core {
         vk::CommandBufferSubmitInfo commandBufferSI(cmd);
 
         FrameData& currentFrame = get_current_frame();
-        vk::SemaphoreSubmitInfo waitInfo(currentFrame.computeSemaphore);
+        vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
         waitInfo.stageMask = wait;
         vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
         signalInfo.stageMask = signal;
@@ -97,7 +99,12 @@ namespace wcvk::core {
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-        graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence);
+        if (auto result = graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
+            auto stringResult = vk::to_string(result);
+            std::string string = "Failed to submit graphics commands. Error: ";
+            string.append(stringResult);
+            throw std::runtime_error(string);
+        }
     }
 
     void Device::submit_compute_work(const commands::ComputeContext &context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal) {
@@ -107,7 +114,7 @@ namespace wcvk::core {
         FrameData& currentFrame = get_current_frame();
         vk::SemaphoreSubmitInfo waitInfo(currentFrame.swapchainSemaphore);
         waitInfo.stageMask = wait;
-        vk::SemaphoreSubmitInfo signalInfo(currentFrame.computeSemaphore);
+        vk::SemaphoreSubmitInfo signalInfo(currentFrame.renderSemaphore);
         signalInfo.stageMask = signal;
         vk::SubmitFlagBits submitFlags{};
         vk::SubmitInfo2 submitInfo(
@@ -115,7 +122,14 @@ namespace wcvk::core {
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-        graphicsQueue.submit2( 1, &submitInfo, currentFrame.computeFence);
+
+
+        if (vk::Result result = graphicsQueue.submit2(1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
+            auto stringResult = vk::to_string(result);
+            std::string string = "Failed to submit compute commands. Error: ";
+            string.append(stringResult);
+            throw std::runtime_error(string);
+        }
     }
 
     void Device::submit_upload_work(const commands::UploadContext &context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal) {
@@ -133,44 +147,71 @@ namespace wcvk::core {
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-        graphicsQueue.submit2( 1, &submitInfo, currentFrame.uploadFence);
+
+        if (auto result = graphicsQueue.submit2(1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
+            auto stringResult = vk::to_string(result);
+            std::string string = "Failed to submit upload commands. Error: ";
+            string.append(stringResult);
+            throw std::runtime_error(string);
+        }
     }
 
     void Device::submit_upload_work(const commands::UploadContext &context) {
-        device.resetFences(1, &immediateFence);
-        immediateCommandBuffer.reset({});
-
         vk::CommandBufferSubmitInfo commandBufferSI(immediateCommandBuffer);
         vk::SubmitInfo2 submitInfo({}, nullptr, nullptr);
-        graphicsQueue.submit2(1, &submitInfo, immediateFence);
-        device.waitForFences(1, &immediateFence, true, 1000000000);
+
+        if (auto result = graphicsQueue.submit2(1, &submitInfo, immediateFence); result != vk::Result::eSuccess) {
+            auto stringResult = vk::to_string(result);
+            std::string string = "Failed to submit upload commands. Error: ";
+            string.append(stringResult);
+            throw std::runtime_error(string);
+        }
+
+        if (auto result = device.waitForFences(1, &immediateFence, true, 1000000000); result != vk::Result::eSuccess) {
+            auto stringResult = "Failed to wait for fences. Error: " + vk::to_string(result) + '\n';
+            throw std::runtime_error(stringResult);
+        }
     }
 
-    void Device::submit_immediate_work(eastl::function<void(VkCommandBuffer cmd)> &&function) {
-        device.resetFences(1, &immediateFence);
+    void Device::submit_immediate_work(std::function<void(VkCommandBuffer cmd)> &&function) {
+        if (auto result = device.resetFences(1, &immediateFence); result != vk::Result::eSuccess) {
+            auto stringResult = "Failed to reset fences. Error: " + vk::to_string(result) + '\n';
+            throw std::runtime_error(stringResult);
+        }
+
         immediateCommandBuffer.reset({});
 
         vk::CommandBufferBeginInfo commandBufferBI(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        immediateCommandBuffer.begin(&commandBufferBI);
+
+        if (auto result = immediateCommandBuffer.begin(&commandBufferBI); result != vk::Result::eSuccess) {
+            auto stringResult = "Failed to begin command buffer. Error: " + vk::to_string(result) + '\n';
+            throw std::runtime_error(stringResult);
+        }
 
         function(immediateCommandBuffer);
         immediateCommandBuffer.end();
 
         vk::CommandBufferSubmitInfo commandBufferSI(immediateCommandBuffer);
         vk::SubmitInfo2 submitInfo({}, nullptr, nullptr);
-        graphicsQueue.submit2(1, &submitInfo, immediateFence);
-        device.waitForFences(1, &immediateFence, true, 1000000000);
+        if (auto result = graphicsQueue.submit2(1, &submitInfo, immediateFence); result != vk::Result::eSuccess) {
+            auto stringResult = vk::to_string(result);
+            std::string string = "Failed to upload immediate commands. Error: ";
+            string.append(stringResult);
+            throw std::runtime_error(string);
+        }
+
+        if (auto result = device.waitForFences(1, &immediateFence, true, 1000000000); result != vk::Result::eSuccess) {
+            auto stringResult = vk::to_string(result);
+            std::string string = "Failed to wait for fences. Error: ";
+            string.append(stringResult);
+            throw std::runtime_error(string);
+        }
     }
 
     void Device::wait_on_work() {
-        vk::Fence fences[] {get_current_frame().renderFence, get_current_frame().computeFence, get_current_frame().uploadFence, immediateFence};
-        device.waitForFences(4, fences, true, 1000000000);
-        device.resetFences(4, fences);
-    }
-
-    void Device::reset_fences() {
-        vk::Fence fences[] {get_current_frame().renderFence, get_current_frame().computeFence };
-        device.resetFences(2, fences);
+        vk::Fence* fences = &get_current_frame().renderFence;
+        vk_check(device.waitForFences(1, fences, true, UINT64_MAX), "Failed to wait for fences");
+        vk_check(device.resetFences(1, fences), "Failed to reset fences");
     }
 
     void Device::present() {
@@ -281,15 +322,8 @@ namespace wcvk::core {
             swapchainExtent = vkbSwapchain.extent;
             swapchain = vkbSwapchain.swapchain;
 
-            std::vector<VkImage> imageTransferVector = vkbSwapchain.get_images().value();
-            for (auto i : imageTransferVector) {
-                swapchainImages.push_back(i);
-            }
-
-            std::vector<VkImageView_T*> imageViewTransferVector = vkbSwapchain.get_image_views().value();
-            for (auto i : imageViewTransferVector) {
-                swapchainImageViews.push_back(i);
-            }
+            swapchainImages = vkbSwapchain.get_images().value();
+            swapchainImageViews = vkbSwapchain.get_image_views().value();
 
             init_commands();
             init_sync_objects();
@@ -309,21 +343,11 @@ namespace wcvk::core {
             device.destroyFence(frame.renderFence);
             device.destroySemaphore(frame.renderSemaphore);
             device.destroySemaphore(frame.swapchainSemaphore);
-            device.destroySemaphore(frame.computeSemaphore);
         }
+        device.destroyCommandPool(immediateCommandPool);
+        device.destroyFence(immediateFence);
 
-        vmaDestroyImage(allocator, drawImage.image, nullptr);
-        device.destroyImageView(drawImage.imageView, nullptr);
-        device.destroySwapchainKHR(swapchain, nullptr);
-        instance.destroy(surface);
-
-        vmaDestroyAllocator(allocator);
-        device.destroy();
-
-        glfwDestroyWindow(window);
-        instance.destroy();
-
-        glfwTerminate();
+        primaryDeletionQueue.flush();
     }
 
     void Device::init_commands() {
@@ -331,16 +355,15 @@ namespace wcvk::core {
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             frames[i].commandPool = device.createCommandPool(commandPoolCI, nullptr);
             vk::CommandBufferAllocateInfo commandBufferAI(frames[i].commandPool, vk::CommandBufferLevel::ePrimary, 1);
-            device.allocateCommandBuffers(&commandBufferAI, &frames[i].graphicsCommandBuffer);
-            device.allocateCommandBuffers(&commandBufferAI, &frames[i].computeCommandBuffer);
-            device.allocateCommandBuffers(&commandBufferAI, &frames[i].uploadCommandBuffer);
+            vk_check(device.allocateCommandBuffers(&commandBufferAI, &frames[i].commandBuffer), "Failed to allocate command buffers");
         }
 
         {
-            immediateCommandPool = device.createCommandPool(commandPoolCI, nullptr);
+            vk::CommandPoolCreateInfo immPoolCI(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, graphicsQueueIndex);
+            immediateCommandPool = device.createCommandPool(immPoolCI, nullptr);
 
             vk::CommandBufferAllocateInfo commandBufferAI(immediateCommandPool, vk::CommandBufferLevel::ePrimary, 1);
-            device.allocateCommandBuffers(&commandBufferAI, &immediateCommandBuffer);
+            vk_check(device.allocateCommandBuffers(&commandBufferAI, &immediateCommandBuffer), "Failed to allocate command buffers");
         }
     }
 
@@ -349,15 +372,12 @@ namespace wcvk::core {
         vk::SemaphoreCreateInfo semaphoreCI;
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            device.createFence(&fenceCI, nullptr, &frames[i].renderFence);
-            device.createFence(&fenceCI, nullptr, &frames[i].computeFence);
-            device.createFence(&fenceCI, nullptr, &frames[i].uploadFence);
-            device.createSemaphore(&semaphoreCI, nullptr, &frames[i].swapchainSemaphore);
-            device.createSemaphore(&semaphoreCI, nullptr, &frames[i].renderSemaphore);
-            device.createSemaphore(&semaphoreCI, nullptr, &frames[i].computeSemaphore);
+            vk_check(device.createFence(&fenceCI, nullptr, &frames[i].renderFence), "Failed to create fence");
+            vk_check(device.createSemaphore(&semaphoreCI, nullptr, &frames[i].swapchainSemaphore), "Failed to create semaphore");
+            vk_check(device.createSemaphore(&semaphoreCI, nullptr, &frames[i].renderSemaphore), "Failed to create semaphore");
         }
 
-        device.createFence(&fenceCI, nullptr, &immediateFence);
+        vk_check(device.createFence(&fenceCI, nullptr, &immediateFence), "Failed to create fence");
     }
 
     void Device::init_allocator() {
@@ -367,6 +387,10 @@ namespace wcvk::core {
         allocatorInfo.instance =  instance;
         allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         vmaCreateAllocator(&allocatorInfo, &allocator);
+
+        primaryDeletionQueue.push_function([&]() {
+            vmaDestroyAllocator(allocator);
+        });
     }
 
     void Device::init_descriptors() {
@@ -403,5 +427,10 @@ namespace wcvk::core {
         VkImageViewCreateInfo viewInfo = vkinit::image_view_CI(drawImage.image, VK_IMAGE_VIEW_TYPE_2D, static_cast<VkFormat>(drawImage.imageFormat), components, subresourceRange);
 
         vkCreateImageView(device, &viewInfo, nullptr, reinterpret_cast<VkImageView*>(&drawImage.imageView));
+
+        primaryDeletionQueue.push_function([this]() {
+            device.destroyImageView(drawImage.imageView, nullptr);
+            vmaDestroyImage(allocator, drawImage.image, drawImage.allocation);
+        });
     }
 }

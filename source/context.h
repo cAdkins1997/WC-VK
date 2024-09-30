@@ -30,7 +30,8 @@ namespace wcvk::commands {
         void set_scissor(uint32_t x, uint32_t y);
         void set_scissor(vk::Extent2D extent);
         void bind_pipeline(const Pipeline& pipeline);
-        void bind_index_buffer(vk::Buffer indexBuffer);
+        void bind_index_buffer(vk::Buffer indexBuffer) const;
+        void bind_vertex_buffer(vk::Buffer vertexBuffer) const;
 
         template<typename T>
         void set_push_constants(const vk::ShaderStageFlags shaderStage, T* pushConstants) {
@@ -69,18 +70,16 @@ namespace wcvk::commands {
         void end();
 
         template<typename T>
-        void upload_buffer(eastl::vector<T> src, Buffer& dst, size_t size) {
+        void upload_buffer(std::vector<T> src, Buffer& dst, const size_t size) {
             Buffer stagingBuffer = make_staging_buffer(size);
 
-            void* data = stagingBuffer.allocation;
-
-            memcpy(data, src.data(), size);
+            memcpy(stagingBuffer.info.pMappedData, src.data(), size);
 
             vk::BufferCopy copy(0, 0, size);
             _commandBuffer.copyBuffer(stagingBuffer.buffer, dst.buffer, 1, &copy);
         }
 
-        MeshBuffer upload_mesh(const Buffer &vertexBuffer, const Buffer &indexBuffer, const eastl::vector<uint32_t>& indices, const eastl::vector<Vertex>& vertices, vk::DeviceAddress deviceAddress);
+        MeshBuffer upload_mesh(Buffer &vertexBuffer, Buffer &indexBuffer, std::vector<Vertex>& vertices, std::vector<uint16_t>& indices);
 
         void upload_texture();
 

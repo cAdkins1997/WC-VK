@@ -7,7 +7,7 @@ namespace wcvk::commands {
     void GraphicsContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        _commandBuffer.begin(&beginInfo);
+        vk_check(_commandBuffer.begin(&beginInfo), "Failed to begine command buffer");
     }
 
     void GraphicsContext::end() {
@@ -50,6 +50,7 @@ namespace wcvk::commands {
         dependencyInfo.bufferMemoryBarrierCount = 1;
         dependencyInfo.pBufferMemoryBarriers = &bufferBarrier;
         vkCmdPipelineBarrier2(_commandBuffer, &dependencyInfo);
+
     }
 
     void GraphicsContext::image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout) {
@@ -162,8 +163,13 @@ namespace wcvk::commands {
         _commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.pipelineLayout, 0, 1, &pipeline.set, 0, nullptr);
     }
 
-    void GraphicsContext::bind_index_buffer(vk::Buffer indexBuffer) {
+    void GraphicsContext::bind_index_buffer(vk::Buffer indexBuffer) const {
         _commandBuffer.bindIndexBuffer(indexBuffer, 0, vk::IndexType::eUint32);
+    }
+
+    void GraphicsContext::bind_vertex_buffer(vk::Buffer vertexBuffer) const {
+        vk::DeviceSize offsets[] = {0};
+        _commandBuffer.bindVertexBuffers(0, vertexBuffer, offsets);
     }
 
     void GraphicsContext::draw() {
@@ -176,7 +182,7 @@ namespace wcvk::commands {
     void ComputeContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        _commandBuffer.begin(&beginInfo);
+        vk_check(_commandBuffer.begin(&beginInfo), "Failed to begin command buffer");
     }
 
     void ComputeContext::end() {
@@ -258,23 +264,22 @@ namespace wcvk::commands {
     void UploadContext::begin() {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        _commandBuffer.begin(&beginInfo);
+        vk_check(_commandBuffer.begin(&beginInfo), "Failed to begin command buffer");
     }
 
     void UploadContext::end() {
         _commandBuffer.end();
     }
 
-    MeshBuffer UploadContext::upload_mesh(const Buffer &vertexBuffer, const Buffer &indexBuffer, const eastl::vector<uint32_t> &indices, const eastl::vector<Vertex> &vertices, vk::DeviceAddress deviceAddress) {
+    MeshBuffer UploadContext::upload_mesh(Buffer &vertexBuffer, Buffer &indexBuffer, std::vector<Vertex> &vertices, std::vector<uint16_t> &indices) {
+        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+        const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
-        MeshBuffer newSurface{};
 
-        newSurface.deviceAddress = deviceAddress;
-        newSurface.vertexBuffer = vertexBuffer;
-        newSurface.indexBuffer = indexBuffer;
+        upload_buffer(vertices, vertexBuffer, vertexBufferSize);
+        upload_buffer(indices, indexBuffer, indexBufferSize);
 
-        upload_buffer(vertices, newSurface.vertexBuffer, vertices.size());
-        upload_buffer(indices, newSurface.indexBuffer, indices.size());
+        MeshBuffer newSurface{indexBuffer, vertexBuffer};
 
         return newSurface;
     }
@@ -283,13 +288,12 @@ namespace wcvk::commands {
         VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         bufferInfo.pNext = nullptr;
         bufferInfo.size = allocSize;
-
         bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
         VmaAllocationCreateInfo vmaallocInfo = {};
-        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        Buffer newBuffer;
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        Buffer newBuffer{};
 
         vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
 

@@ -248,6 +248,7 @@ VkRenderingInfo vkinit::rendering_info(
     renderingInfo.layerCount = layerCount;
     renderingInfo.viewMask = viewMask;
     renderingInfo.colorAttachmentCount = colorAttachmentCount;
+    return renderingInfo;
 }
 
 VkRenderingAttachmentInfo vkinit::rendering_attachment_info(

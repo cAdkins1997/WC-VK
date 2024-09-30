@@ -17,7 +17,27 @@ vk::Pipeline PipelineBuilder::build_pipeline(vk::Device device) {
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
+    std::array<vk::VertexInputAttributeDescription, 2> vertexInputAttribDesc;
+    vertexInputAttribDesc[0].binding = 0;
+    vertexInputAttribDesc[0].location = 0;
+    vertexInputAttribDesc[0].format = vk::Format::eR32G32Sfloat;
+    vertexInputAttribDesc[0].offset = offsetof(Vertex, pos);
+
+    vertexInputAttribDesc[1].binding = 0;
+    vertexInputAttribDesc[1].location = 1;
+    vertexInputAttribDesc[1].format = vk::Format::eR32G32B32Sfloat;
+    vertexInputAttribDesc[1].offset = offsetof(Vertex, color);
+
+    std::array<vk::VertexInputBindingDescription, 1> vertexingBindingDescs;
+    vertexingBindingDescs[0].binding = 0;
+    vertexingBindingDescs[0].inputRate = vk::VertexInputRate::eVertex;
+    vertexingBindingDescs[0].stride = sizeof(Vertex);
+
     vk::PipelineVertexInputStateCreateInfo vertexInputCI;
+    vertexInputCI.vertexAttributeDescriptionCount = 2;
+    vertexInputCI.vertexBindingDescriptionCount = 1;
+    vertexInputCI.pVertexAttributeDescriptions =  vertexInputAttribDesc.data();
+    vertexInputCI.pVertexBindingDescriptions = vertexingBindingDescs.data();
 
     vk::GraphicsPipelineCreateInfo pipelineCI;
     pipelineCI.pNext = &renderInfo;

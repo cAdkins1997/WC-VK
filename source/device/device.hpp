@@ -5,13 +5,14 @@
 #include "../vkcommon.h"
 #include <fstream>
 #include <VkBootstrap.h>
-#include <EASTL/vector.h>
-#include <EASTL/string.h>
-#include <EASTL/optional.h>
-#include <EASTL/shared_ptr.h>
-#include <EASTL/span.h>
-#include <EASTL/functional.h>
-#include <fastgltf/core.hpp>
+#include <VkBootstrapDispatch.h>
+#include <vector>
+#include <string>
+#include <optional>
+#include <memory>
+#include <span>
+#include <functional>
+#include <filesystem>
 
 namespace wcvk::commands {
     struct GraphicsContext;
@@ -35,7 +36,7 @@ namespace wcvk::core {
     public:
         [[nodiscard]] Buffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) const;
         [[nodiscard]] Image* create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped);
-        Shader create_shader(const char* filePath) const;
+        [[nodiscard]] Shader create_shader(std::string_view filePath) const;
 
         void submit_graphics_work(const commands::GraphicsContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
         void submit_compute_work(const commands::ComputeContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
@@ -43,10 +44,9 @@ namespace wcvk::core {
         void submit_upload_work(const commands::UploadContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
         void submit_upload_work(const commands::UploadContext& context);
 
-        void submit_immediate_work(eastl::function<void(VkCommandBuffer cmd)>&& function);
+        void submit_immediate_work(std::function<void(VkCommandBuffer cmd)>&& function);
 
         void wait_on_work();
-        void reset_fences();
         void present();
 
         Image& get_draw_image() { return drawImage; }
@@ -69,8 +69,8 @@ namespace wcvk::core {
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;
         vk::Format swapchainFormat;
-        eastl::vector<VkImage> swapchainImages{};
-        eastl::vector<VkImageView> swapchainImageViews{};
+        std::vector<VkImage> swapchainImages{};
+        std::vector<VkImageView> swapchainImageViews{};
         vk::Extent2D swapchainExtent{};
         uint32_t swapchainImageIndex = 0;
         FrameData frames[MAX_FRAMES_IN_FLIGHT];
@@ -85,7 +85,7 @@ namespace wcvk::core {
 
         VmaAllocator allocator{};
 
-        eastl::vector<Image> images;
+        std::vector<Image> images;
 
         vk::Fence immediateFence;
         vk::CommandPool immediateCommandPool;
@@ -104,6 +104,7 @@ namespace wcvk::core {
         Device(const Device&) = delete;
         Device& operator=(const Device&) = delete;
 
+        DeletionQueue primaryDeletionQueue;
 
     private:
         void init_commands();

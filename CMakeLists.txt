@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.28)
+
+cmake_minimum_required(VERSION 3.5)
 project(WCVK)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -19,19 +20,15 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/vkcommon.cpp
         source/device/resources.h
         source/device/device.hpp
-        source/meshes/meshes.h
-        source/meshes/meshes.cpp)
+)
 
 if (WIN32)
 
 find_package(Vulkan REQUIRED)
-find_package(vk-bootstrap CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/vk-bootstrap_x64-mingw-dynamic")
-find_package(fmt CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fmt_x64-mingw-dynamic")
-find_package(simdjson CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/simdjson_x64-mingw-dynamic")
-find_package(fastgltf CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/fastgltf_x64-mingw-dynamic")
-find_package(EABase CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/eabase_x64-mingw-dynamic")
-find_package(EASTL CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/eastl_x64-mingw-dynamic")
-find_package(mimalloc CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/mimalloc_x64-mingw-dynamic")
+#find_package(include/simdjson-3.10.1)
+#find_package(include/fastgltf-0.8.0)
+#add_subdirectory(include/EASTL-3.21.23)
+add_subdirectory(include/vk-bootstrap-main)
 add_subdirectory(include/glfw-3.4)
 
 set(EASTL_LIBRARY debug ${z}/build/Debug/EASTL.lib optimized ${EASTL_ROOT_DIR}/build/Release/EASTL.lib)
@@ -42,14 +39,10 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 target_link_libraries(${PROJECT_NAME}
         glfw
-        Vulkan::Vulkan
         vk-bootstrap::vk-bootstrap
-        vk-bootstrap::vk-bootstrap-compiler-warnings
-        fastgltf::fastgltf
-        fmt::fmt
-        EASTL
-        EABase
-        $<IF:$<TARGET_EXISTS:mimalloc-static>,mimalloc-static,mimalloc>
+        Vulkan::Vulkan
+        #EASTL
+        #EABase
 )
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")
@@ -59,15 +52,15 @@ else()
 endif()
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
-        "${PROJECT_SOURCE_DIR}/shaders/*.frag"
-        "${PROJECT_SOURCE_DIR}/shaders/*.vert"
-        "${PROJECT_SOURCE_DIR}/shaders/*.comp"
+        "shaders/*.frag"
+        "shaders/*.vert"
+        "shaders/*.comp"
 )
 
 foreach(GLSL ${GLSL_SOURCE_FILES})
     message(STATUS "BUILDING SHADER")
     get_filename_component(FILE_NAME ${GLSL} NAME)
-    set(SPIRV "${PROJECT_SOURCE_DIR}/shaders/${FILE_NAME}.spv")
+    set(SPIRV "shaders/${FILE_NAME}.spv")
     message(STATUS ${GLSL})
     add_custom_command(
             OUTPUT ${SPIRV}
@@ -83,10 +76,10 @@ add_custom_target(
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/shaders/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "shaders/"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${PROJECT_SOURCE_DIR}/shaders"
-        "${PROJECT_SOURCE_DIR}/shaders"
+        "shaders"
+        "shaders"
 )
 
 elseif (UNIX AND NOT APPLE)
@@ -95,7 +88,6 @@ elseif (UNIX AND NOT APPLE)
     set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     add_subdirectory(include/glfw-3.4)
-
     add_subdirectory(include/fastgltf-0.8.0)
 
     find_package(vk-bootstrap CONFIG REQUIRED HINTS "${VCPK_ROOT}/vcpkg/packages/vk-bootstrap_x64-linux")
@@ -110,15 +102,15 @@ elseif (UNIX AND NOT APPLE)
     set(GLSL_VALIDATOR "/${VULKAN_SDK}bin/glslangValidator")
 
     file(GLOB_RECURSE GLSL_SOURCE_FILES
-            "${PROJECT_SOURCE_DIR}/shaders/*.frag"
-            "${PROJECT_SOURCE_DIR}/shaders/*.vert"
-            "${PROJECT_SOURCE_DIR}/shaders/*.comp"
+            "shaders/*.frag"
+            "shaders/*.vert"
+            "shaders/*.comp"
     )
 
     foreach(GLSL ${GLSL_SOURCE_FILES})
         message(STATUS "BUILDING SHADER")
         get_filename_component(FILE_NAME ${GLSL} NAME)
-        set(SPIRV "${PROJECT_SOURCE_DIR}/shaders/${FILE_NAME}.spv")
+        set(SPIRV "shaders/${FILE_NAME}.spv")
         message(STATUS ${GLSL})
         add_custom_command(
                 OUTPUT ${SPIRV}
@@ -134,10 +126,10 @@ elseif (UNIX AND NOT APPLE)
     )
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/shaders/"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "shaders/"
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${PROJECT_SOURCE_DIR}/shaders"
-            "${PROJECT_SOURCE_DIR}/shaders"
+            "shaders"
+            "shaders"
     )
 
 endif ()

@@ -24,17 +24,15 @@ namespace wcvk {
         Pipeline trianglePipeline;
 
         Image drawImage;
-        VkImage drawHandle;
+        VkImage drawHandle{};
         vk::Extent2D drawImageExtent;
-
-        eastl::optional<eastl::vector<eastl::shared_ptr<Mesh>>> load_GLTF_meshs(const char* path);
 
     private:
         core::Device device;
 
         MeshBuffer meshBuffer{};
-        size_t vertSize;
-        size_t indexSize;
+        size_t vertSize{};
+        size_t indexSize{};
     };
 }
 

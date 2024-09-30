@@ -1,7 +1,8 @@
 
 #pragma once
-#include <EASTL/vector.h>
+#include <vector>
 #include "../vkcommon.h"
+#include "../device/resources.h"
 
 class PipelineBuilder {
 public:
@@ -20,7 +21,7 @@ public:
     void disable_depthtest();
     void disable_blending();
 
-    eastl::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
     vk::PipelineRasterizationStateCreateInfo rasterizer;

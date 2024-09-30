@@ -1,24 +1,36 @@
 
 #pragma once
-#include <EASTL/compare.h>
-#include <EASTL/vector.h>
-#include <EASTL/string.h>
+#include <vector>
+#include <string>
+#include <functional>
 
 #include "../vkcommon.h"
 #include "../pipelines/descriptors.h"
 
-struct FrameData {
-    vk::CommandPool commandPool;
-    vk::CommandBuffer graphicsCommandBuffer;
-    vk::CommandBuffer computeCommandBuffer;
-    vk::CommandBuffer uploadCommandBuffer;
+struct DeletionQueue {
+    std::deque<std::function<void()>> deletors;
 
+    void push_function(std::function<void()>&& function) {
+        deletors.push_back(function);
+    }
+
+    void flush() {
+        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+            (*it)();
+        }
+
+        deletors.clear();
+    }
+};
+
+struct FrameData {
+    DeletionQueue deletionQueue;
+
+    vk::CommandPool commandPool;
+    vk::CommandBuffer commandBuffer;
     vk::Semaphore swapchainSemaphore;
     vk::Semaphore renderSemaphore;
-    vk::Semaphore computeSemaphore;
     vk::Fence renderFence;
-    vk::Fence computeFence;
-    vk::Fence uploadFence;
 
     DescriptorAllocator frameDescriptors;
 };
@@ -49,12 +61,17 @@ struct Image {
 };
 
 struct Vertex {
+    glm::vec2 pos;
+    glm::vec3 color;
+};
+
+/*struct Vertex {
     glm::vec3 position;
     float uv_x;
     glm::vec3 normal;
     float uv_y;
     glm::vec4 color;
-};
+};*/
 
 struct Surface {
     uint32_t startIndex{};
@@ -68,8 +85,8 @@ struct MeshBuffer {
 };
 
 struct Mesh {
-    eastl::string name{};
-    eastl::vector<Surface> surfaces;
+    std::string name{};
+    std::vector<Surface> surfaces;
     MeshBuffer mesh;
 };
 

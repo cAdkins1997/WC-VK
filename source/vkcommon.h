@@ -14,7 +14,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
-#include <mimalloc.h>
+#include <iostream>
 
 #if defined(WIN32)
 void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned debugFlags, const char* file, int line);
@@ -24,6 +24,6 @@ void* operator new[](size_t size, const char* pName, int flags, unsigned debugFl
 void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
 #endif
 
-#include <iostream>
+void vk_check(vk::Result result, const std::string& outputString);
 
 #endif //VKCOMMON_H

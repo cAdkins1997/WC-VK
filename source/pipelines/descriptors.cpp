@@ -35,7 +35,7 @@ vk::DescriptorSetLayout DescriptorLayoutBuilder::build(vk::Device device, vk::Fl
     return set;
 }
 
-void DescriptorAllocator::init(const vk::Device& device, uint32_t maxSets, eastl::span<PoolSizeRatio> poolRatios) {
+void DescriptorAllocator::init(const vk::Device& device, uint32_t maxSets, std::span<PoolSizeRatio> poolRatios) {
     ratios.clear();
 
     for (auto& ratio : ratios) {
@@ -117,11 +117,11 @@ vk::DescriptorPool DescriptorAllocator::get_pool(const vk::Device& device) {
     return newPool;
 }
 
-vk::DescriptorPool DescriptorAllocator::create_pool(const vk::Device& device, int32_t setCount, eastl::span<PoolSizeRatio> poolSizeRatio) {
+vk::DescriptorPool DescriptorAllocator::create_pool(const vk::Device& device, int32_t setCount, std::span<PoolSizeRatio> poolSizeRatio) {
 
-    eastl::vector<vk::DescriptorPoolSize> poolSizes;
+    std::vector<vk::DescriptorPoolSize> poolSizes;
     for (PoolSizeRatio& ratio : ratios) {
-        poolSizes.push_back(vk::DescriptorPoolSize(ratio.type, static_cast<uint32_t>(ratio.ratio * setCount)));
+        poolSizes.emplace_back(ratio.type, static_cast<uint32_t>(ratio.ratio * setCount));
     }
 
     vk::DescriptorPoolCreateInfo poolCI({}, setCount, static_cast<uint32_t>(poolSizes.size()), poolSizes.data());
@@ -174,5 +174,5 @@ void DescriptorWriter::update_set(vk::Device device, vk::DescriptorSet set) {
         write.dstSet = set;
     }
 
-    device.updateDescriptorSets(static_cast<uint32_t>(writes.size()), &writes.front(), 0, nullptr);
+    device.updateDescriptorSets(static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
