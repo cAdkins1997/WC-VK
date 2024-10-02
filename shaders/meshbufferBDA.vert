@@ -1,8 +1,8 @@
 #version 450
-#extension GL_EXT_buffer_reference2 : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_buffer_reference : require
 
-layout (location = 0) out vec4 fragColor;
+layout (location = 0) out vec3 outColor;
+layout (location = 1) out vec2 outUV;
 
 struct Vertex {
     vec3 position;
@@ -12,16 +12,19 @@ struct Vertex {
     vec4 color;
 };
 
-layout(std430, buffer_reference, buffer_reference_align = 4) readonly buffer Position {
+layout(buffer_reference, std430) readonly buffer VertexBuffer{
     Vertex vertices[];
 };
 
-layout(std430, push_constant) uniform Constants {
+layout( push_constant ) uniform constants {
     mat4 worldMatrix;
-    uint64_t deviceAddress;
-} constants;
+    VertexBuffer vertexBuffer;
+} PushConstants;
 
 void main() {
-    Position pos = Position(constants.deviceAddress);
-    fragColor = pos.vertices[gl_VertexIndex].color;
+    Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
+    gl_Position = vec4(v.position * PushConstants.worldMatrix, 1.0f);
+    outColor = v.color.xyz;
+    outUV.x = v.uv_x;
+    outUV.y = v.uv_y;
 }

@@ -29,12 +29,13 @@ namespace wcvk::commands {
         void set_viewport(vk::Extent2D extent, float minDepth, float maxDepth);
         void set_scissor(uint32_t x, uint32_t y);
         void set_scissor(vk::Extent2D extent);
+        void set_push_constants(vk::ShaderStageFlags shaderStages, uint32_t offset, PushConstants& pushConstants);
         void bind_pipeline(const Pipeline& pipeline);
         void bind_index_buffer(vk::Buffer indexBuffer) const;
         void bind_vertex_buffer(vk::Buffer vertexBuffer) const;
 
         template<typename T>
-        void set_push_constants(const vk::ShaderStageFlags shaderStage, T* pushConstants) {
+        void set_push_constants(const vk::ShaderStageFlags shaderStage, T pushConstants) {
             _commandBuffer.pushConstants(_pipeline.pipelineLayout, shaderStage, 0, sizeof(T), &pushConstants);
         }
 
@@ -64,31 +65,23 @@ namespace wcvk::commands {
     };
 
     struct UploadContext {
-        explicit UploadContext(const vk::CommandBuffer& commandBuffer, const VmaAllocator& allocator);
+        explicit UploadContext(const vk::Device& device, const vk::CommandBuffer& commandBuffer, const VmaAllocator& allocator);
 
         void begin();
         void end();
 
-        template<typename T>
-        void upload_buffer(std::vector<T> src, Buffer& dst, const size_t size) {
-            Buffer stagingBuffer = make_staging_buffer(size);
-
-            memcpy(stagingBuffer.info.pMappedData, src.data(), size);
-
-            vk::BufferCopy copy(0, 0, size);
-            _commandBuffer.copyBuffer(stagingBuffer.buffer, dst.buffer, 1, &copy);
-        }
-
-        MeshBuffer upload_mesh(Buffer &vertexBuffer, Buffer &indexBuffer, std::vector<Vertex>& vertices, std::vector<uint16_t>& indices);
+        MeshBuffer upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices);
 
         void upload_texture();
 
     private:
         Buffer make_staging_buffer(size_t allocSize);
+        Buffer create_device_buffer(size_t size, VkBufferUsageFlags bufferUsage);
 
     public:
         VmaAllocator _allocator{};
         vk::CommandBuffer _commandBuffer;
+        vk::Device _device;
         Pipeline _pipeline;
     };
 }

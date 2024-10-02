@@ -157,55 +157,43 @@ namespace wcvk::core {
     }
 
     void Device::submit_upload_work(const commands::UploadContext &context) {
-        vk::CommandBufferSubmitInfo commandBufferSI(immediateCommandBuffer);
-        vk::SubmitInfo2 submitInfo({}, nullptr, nullptr);
+        vk::CommandBuffer cmd = context._commandBuffer ;
+        vk::CommandBufferSubmitInfo commandBufferSI(cmd);
+        vk::SubmitInfo2 submitInfo({}, nullptr, commandBufferSI);
+        vk_check(
+            graphicsQueue.submit2(1, &submitInfo, immediateFence),
+            "Failed to submit immediate upload commands"
+            );
 
-        if (auto result = graphicsQueue.submit2(1, &submitInfo, immediateFence); result != vk::Result::eSuccess) {
-            auto stringResult = vk::to_string(result);
-            std::string string = "Failed to submit upload commands. Error: ";
-            string.append(stringResult);
-            throw std::runtime_error(string);
-        }
-
-        if (auto result = device.waitForFences(1, &immediateFence, true, 1000000000); result != vk::Result::eSuccess) {
-            auto stringResult = "Failed to wait for fences. Error: " + vk::to_string(result) + '\n';
-            throw std::runtime_error(stringResult);
-        }
+        vk_check(
+            device.waitForFences(1, &immediateFence, true, UINT64_MAX),
+            "Failed to wait for fences"
+            );
     }
 
     void Device::submit_immediate_work(std::function<void(VkCommandBuffer cmd)> &&function) {
-        if (auto result = device.resetFences(1, &immediateFence); result != vk::Result::eSuccess) {
-            auto stringResult = "Failed to reset fences. Error: " + vk::to_string(result) + '\n';
-            throw std::runtime_error(stringResult);
-        }
+        vk_check(device.resetFences(1, &immediateFence), "Failed to reset fences");
 
         immediateCommandBuffer.reset({});
 
         vk::CommandBufferBeginInfo commandBufferBI(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-        if (auto result = immediateCommandBuffer.begin(&commandBufferBI); result != vk::Result::eSuccess) {
-            auto stringResult = "Failed to begin command buffer. Error: " + vk::to_string(result) + '\n';
-            throw std::runtime_error(stringResult);
-        }
+        vk_check(immediateCommandBuffer.begin(&commandBufferBI), "Failed to beginm command buffer");
 
         function(immediateCommandBuffer);
         immediateCommandBuffer.end();
 
         vk::CommandBufferSubmitInfo commandBufferSI(immediateCommandBuffer);
         vk::SubmitInfo2 submitInfo({}, nullptr, nullptr);
-        if (auto result = graphicsQueue.submit2(1, &submitInfo, immediateFence); result != vk::Result::eSuccess) {
-            auto stringResult = vk::to_string(result);
-            std::string string = "Failed to upload immediate commands. Error: ";
-            string.append(stringResult);
-            throw std::runtime_error(string);
-        }
+        vk_check(
+            graphicsQueue.submit2(1, &submitInfo, immediateFence),
+            "Failed to submit immediate upload commands"
+            );
 
-        if (auto result = device.waitForFences(1, &immediateFence, true, 1000000000); result != vk::Result::eSuccess) {
-            auto stringResult = vk::to_string(result);
-            std::string string = "Failed to wait for fences. Error: ";
-            string.append(stringResult);
-            throw std::runtime_error(string);
-        }
+        vk_check(
+            device.waitForFences(1, &immediateFence, true, UINT64_MAX),
+            "Failed to wait for fences"
+            );
     }
 
     void Device::wait_on_work() {

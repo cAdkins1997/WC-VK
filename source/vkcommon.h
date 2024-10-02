@@ -16,6 +16,7 @@
 
 #include <iostream>
 
+/*
 #if defined(WIN32)
 void* __cdecl operator new[](size_t size, const char* name, int flags, unsigned debugFlags, const char* file, int line);
 void* __cdecl operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
@@ -23,7 +24,9 @@ void* __cdecl operator new[](size_t size, size_t alignment, size_t alignmentOffs
 void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
 void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line);
 #endif
+*/
 
 void vk_check(vk::Result result, const std::string& outputString);
+void vk_check(VkResult result, const std::string& outputString);
 
 #endif //VKCOMMON_H

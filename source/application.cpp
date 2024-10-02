@@ -46,10 +46,10 @@ namespace wcvk {
 
         drawImagePipeline.pipeline = device.get_handle().createComputePipeline(nullptr, computePipelineCI).value;
 
-        Shader vertShader = device.create_shader("../shaders/meshbuffer.vert.spv");
+        Shader vertShader = device.create_shader("../shaders/meshbufferBDA.vert.spv");
         Shader fragShader = device.create_shader("../shaders/triangle.frag.spv");
 
-        vk::PushConstantRange pcRange(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushConstants));
+        vk::PushConstantRange pcRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(PushConstants));
 
         vk::PipelineLayoutCreateInfo trianglePipelineLayoutCI;
         trianglePipelineLayoutCI.pSetLayouts = &trianglePipeline.descriptorLayout;
@@ -106,20 +106,20 @@ namespace wcvk {
         computeContext.dispatch(std::ceil(device.width / 16.0f), std::ceil(device.height / 16.0f), 1);
 
         commands::GraphicsContext graphicsContext(currentFrame.commandBuffer);
-        graphicsContext.bind_pipeline(trianglePipeline);
-        graphicsContext.bind_vertex_buffer(meshBuffer.vertexBuffer.buffer);
-        graphicsContext.bind_index_buffer(meshBuffer.indexBuffer.buffer);
 
         graphicsContext.image_barrier(drawHandle, vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
         vk::RenderingAttachmentInfo drawAttachment(drawImage.imageView, vk::ImageLayout::eColorAttachmentOptimal);
 
         graphicsContext.set_up_render_pass(drawImageExtent, &drawAttachment, nullptr);
-
-        PushConstants pushConstants {glm::mat4{1.0f}, meshBuffer.deviceAddress};
-        graphicsContext.set_push_constants(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, &pushConstants);
+        graphicsContext.bind_pipeline(trianglePipeline);
 
         graphicsContext.set_viewport(drawImageExtent, 0.0f, 1.0f);
         graphicsContext.set_scissor(drawImageExtent);
+
+        PushConstants pushConstants {glm::mat4{1.0f}, meshBuffer.deviceAddress};
+        graphicsContext.set_push_constants(vk::ShaderStageFlagBits::eVertex, 0, pushConstants);
+        graphicsContext.bind_index_buffer(meshBuffer.indexBuffer.buffer);
+
         graphicsContext.draw();
 
         graphicsContext.image_barrier(drawHandle, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal);
@@ -134,62 +134,32 @@ namespace wcvk {
     }
 
     void Application::init_descriptors() {
-        std::vector<Vertex> vertices = {
-            {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-        };
+        std::array<Vertex, 4> vertices{};
+        vertices[0].position = {0.5,-0.5, 0};
+        vertices[1].position = {0.5,0.5, 0};
+        vertices[2].position = {-0.5,-0.5, 0};
+        vertices[3].position = {-0.5,0.5, 0};
 
-        /*std::vector<Vertex> vertices {
-            Vertex {
-                glm::vec3{-0.5f, -0.5f, 0.0f}, 0, glm::vec3{}, 0, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
-                },
-            Vertex {
-                glm::vec3{0.5f, -0.5f, 0.0f}, 0, glm::vec3{}, 0, glm::vec4{0.0f, 1.0f, 0.0f, 1.0f}
-            },
-            Vertex {
-                glm::vec3{0.5f, 0.5f, 0.0f}, 0, glm::vec3{}, 0, glm::vec4{0.0f, 0.0f, 1.0f, 1.0f}
-            },
-            Vertex {
-                glm::vec3{-0.5f, 0.5f, 0.0f}, 0, glm::vec3{}, 0, glm::vec4{1.0f, 0.0f, 1.0f, 1.0f}
-            }
-        };*/
+        vertices[0].color = {0,0, 0,1};
+        vertices[1].color = { 0.5,0.5,0.5 ,1};
+        vertices[2].color = { 1,0, 0,1 };
+        vertices[3].color = { 0,1, 0,1 };
 
+        std::array<uint32_t, 6> indices{};
+        indices[0] = 0;
+        indices[1] = 1;
+        indices[2] = 2;
 
-        size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
+        indices[3] = 2;
+        indices[4] = 1;
+        indices[5] = 3;
 
-        VkBufferUsageFlags vertexBufferFlags =
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;;
-        Buffer vertexBuffer = device.create_buffer(vertexBufferSize, vertexBufferFlags, VMA_MEMORY_USAGE_GPU_ONLY);
-
-        std::vector<uint16_t> indices = {
-            0, 1, 2, 2, 3, 0
-        };
-
-        size_t indexBufferSize = indices.size() * sizeof(Vertex);
-
-        VkBufferUsageFlags indexBufferFlags =
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        Buffer indexBuffer = device.create_buffer(indexBufferSize, indexBufferFlags, VMA_MEMORY_USAGE_GPU_ONLY);
-
-        vk_check(device.get_handle().resetFences(1, &device.immediateFence), "Failed to wait for fences");
-        commands::UploadContext uploadContext(device.immediateCommandBuffer, device.allocator);
+        vk_check(device.get_handle().resetFences(1, &device.immediateFence), "Failed to reset fences");
+        commands::UploadContext uploadContext(device.get_handle(), device.immediateCommandBuffer, device.allocator);
         uploadContext.begin();
-        meshBuffer = uploadContext.upload_mesh(vertexBuffer, indexBuffer, vertices, indices);
+        meshBuffer = uploadContext.upload_mesh(vertices, indices);
         uploadContext.end();
         device.submit_upload_work(uploadContext);
-
-        vk::BufferDeviceAddressInfo bufferDeviceAI;
-        bufferDeviceAI.buffer = meshBuffer.vertexBuffer.buffer;
-        meshBuffer.deviceAddress = device.get_handle().getBufferAddress(bufferDeviceAI);
 
         std::vector<DescriptorAllocator::PoolSizeRatio> sizes {
                 { vk::DescriptorType::eStorageBuffer, 3 },
@@ -230,16 +200,12 @@ namespace wcvk {
         {
             DescriptorLayoutBuilder builder;
             builder.add_binding(0, vk::DescriptorType::eStorageImage);
-            builder.add_binding(1, vk::DescriptorType::eStorageBuffer);
-            builder.add_binding(2, vk::DescriptorType::eStorageBuffer);
             trianglePipeline.descriptorLayout = builder.build(device.device, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
 
             trianglePipeline.set = descriptorAllocator.allocate(device.device, trianglePipeline.descriptorLayout);
 
             DescriptorWriter writer;
             writer.write_image(0, device.drawImage.imageView, nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
-            writer.write_buffer(1, meshBuffer.vertexBuffer.buffer, vertexBufferSize, 0, vk::DescriptorType::eStorageBuffer);
-            writer.write_buffer(2, meshBuffer.indexBuffer.buffer, indexBufferSize, 0, vk::DescriptorType::eStorageBuffer);
             writer.update_set(device.device, trianglePipeline.set);
         }
 

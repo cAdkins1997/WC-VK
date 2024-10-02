@@ -7,6 +7,8 @@
 #include "../vkcommon.h"
 #include "../pipelines/descriptors.h"
 
+enum class DeviceAddress : uint64_t { Invalid = 0 };
+
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
 
@@ -61,17 +63,12 @@ struct Image {
 };
 
 struct Vertex {
-    glm::vec2 pos;
-    glm::vec3 color;
-};
-
-/*struct Vertex {
     glm::vec3 position;
     float uv_x;
     glm::vec3 normal;
     float uv_y;
     glm::vec4 color;
-};*/
+};
 
 struct Surface {
     uint32_t startIndex{};

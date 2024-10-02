@@ -157,6 +157,10 @@ namespace wcvk::commands {
         _commandBuffer.setScissor(0, 1, &scissor);
     }
 
+    void GraphicsContext::set_push_constants(vk::ShaderStageFlags shaderStages, uint32_t offset, PushConstants &pushConstants) {
+        _commandBuffer.pushConstants(_pipeline.pipelineLayout, shaderStages, offset, sizeof(PushConstants), &pushConstants);
+    }
+
     void GraphicsContext::bind_pipeline(const Pipeline &pipeline) {
         _pipeline = pipeline;
         _commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.pipeline);
@@ -173,7 +177,7 @@ namespace wcvk::commands {
     }
 
     void GraphicsContext::draw() {
-        _commandBuffer.draw(3, 1, 0, 0);
+        _commandBuffer.drawIndexed(6, 6, 0, 0, 0);
         _commandBuffer.endRendering();
     }
 
@@ -259,7 +263,8 @@ namespace wcvk::commands {
         _commandBuffer.dispatch(groupCountX, groupCountY, groupCountZ);
     }
 
-    UploadContext::UploadContext(const vk::CommandBuffer &commandBuffer, const VmaAllocator& allocator) : _allocator(allocator), _commandBuffer(commandBuffer) {}
+    UploadContext::UploadContext(const vk::Device& device, const vk::CommandBuffer &commandBuffer, const VmaAllocator& allocator) :
+    _device(device), _allocator(allocator), _commandBuffer(commandBuffer) {}
 
     void UploadContext::begin() {
         _commandBuffer.reset();
@@ -271,17 +276,33 @@ namespace wcvk::commands {
         _commandBuffer.end();
     }
 
-    MeshBuffer UploadContext::upload_mesh(Buffer &vertexBuffer, Buffer &indexBuffer, std::vector<Vertex> &vertices, std::vector<uint16_t> &indices) {
+    MeshBuffer UploadContext::upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices) {
         const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
         const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
+        MeshBuffer newMesh{};
+        newMesh.vertexBuffer = create_device_buffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+        newMesh.indexBuffer = create_device_buffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-        upload_buffer(vertices, vertexBuffer, vertexBufferSize);
-        upload_buffer(indices, indexBuffer, indexBufferSize);
+        Buffer stagingBuffer = make_staging_buffer(vertexBufferSize + indexBufferSize);
 
-        MeshBuffer newSurface{indexBuffer, vertexBuffer};
+        void* data = stagingBuffer.info.pMappedData;
+        vmaMapMemory(_allocator, stagingBuffer.allocation, &data);
+        memcpy(data, vertices.data(), vertexBufferSize);
+        memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
+        vmaUnmapMemory(_allocator, stagingBuffer.allocation);
 
-        return newSurface;
+        vk::BufferDeviceAddressInfo deviceAddressInfo;
+        deviceAddressInfo.buffer = newMesh.vertexBuffer.buffer;
+        newMesh.deviceAddress = _device.getBufferAddress(&deviceAddressInfo);
+
+        vk::BufferCopy vertexCopy(0, 0, vertexBufferSize);
+        vk::BufferCopy indexCopy(vertexBufferSize, 0, indexBufferSize);
+
+        _commandBuffer.copyBuffer(stagingBuffer.buffer, newMesh.vertexBuffer.buffer, 1, &vertexCopy);
+        _commandBuffer.copyBuffer(stagingBuffer.buffer, newMesh.indexBuffer.buffer, 1, &indexCopy);
+
+        return newMesh;
     }
 
     Buffer UploadContext::make_staging_buffer(size_t allocSize) {
@@ -295,8 +316,30 @@ namespace wcvk::commands {
         vmaallocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
         Buffer newBuffer{};
 
-        vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
+        vk_check(
+            vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info),
+                "Failed to create staging buffer"
+            );
 
         return newBuffer;
+    }
+
+    Buffer UploadContext::create_device_buffer(size_t size, VkBufferUsageFlags bufferUsage) {
+        VmaAllocationCreateInfo vmaAI{};
+        vmaAI.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        vmaAI.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+        VkBufferCreateInfo deviceBufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        deviceBufferInfo.pNext = nullptr;
+        deviceBufferInfo.size = size;
+        deviceBufferInfo.usage = bufferUsage;
+
+        Buffer deviceBuffer{};
+        vk_check(
+            vmaCreateBuffer(_allocator, &deviceBufferInfo, &vmaAI, &deviceBuffer.buffer, &deviceBuffer.allocation, &deviceBuffer.info),
+                "Failed to create upload context device buffer"
+            );
+
+        return deviceBuffer;
     }
 }
