@@ -64,7 +64,7 @@ namespace wcvk::commands {
         imageBarrier.oldLayout = currentLayout;
         imageBarrier.newLayout = newLayout;
 
-        vk::ImageAspectFlags aspectMask = (newLayout == vk::ImageLayout::eAttachmentOptimal) ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor;
+        vk::ImageAspectFlags aspectMask = (newLayout == (vk::ImageLayout)VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? (vk::ImageAspectFlags)VK_IMAGE_ASPECT_DEPTH_BIT : (vk::ImageAspectFlags)VK_IMAGE_ASPECT_COLOR_BIT;
         imageBarrier.subresourceRange = vk::ImageSubresourceRange(
             aspectMask,
             0,
@@ -176,8 +176,8 @@ namespace wcvk::commands {
         _commandBuffer.bindVertexBuffers(0, vertexBuffer, offsets);
     }
 
-    void GraphicsContext::draw() {
-        _commandBuffer.drawIndexed(6, 6, 0, 0, 0);
+    void GraphicsContext::draw(uint32_t count, uint32_t startIndex) {
+        _commandBuffer.drawIndexed(count, 1, startIndex, 0, 0);
         _commandBuffer.endRendering();
     }
 

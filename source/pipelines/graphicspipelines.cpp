@@ -82,6 +82,16 @@ void PipelineBuilder::set_depth_format(vk::Format format) {
     renderInfo.depthAttachmentFormat = format;
 }
 
+void PipelineBuilder::enable_depthtest(bool depthWriteEnable, vk::CompareOp op) {
+    depthStencil.depthTestEnable = vk::True;
+    depthStencil.depthWriteEnable = depthWriteEnable;
+    depthStencil.depthCompareOp = op;
+    depthStencil.depthBoundsTestEnable = vk::False;
+    depthStencil.stencilTestEnable = vk::False;
+    depthStencil.minDepthBounds = 0.f;
+    depthStencil.maxDepthBounds = 1.f;
+}
+
 void PipelineBuilder::disable_depthtest() {
     depthStencil.depthTestEnable = vk::False;
     depthStencil.depthWriteEnable = vk::False;

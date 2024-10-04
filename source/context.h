@@ -39,7 +39,7 @@ namespace wcvk::commands {
             _commandBuffer.pushConstants(_pipeline.pipelineLayout, shaderStage, 0, sizeof(T), &pushConstants);
         }
 
-        void draw();
+        void draw(uint32_t count, uint32_t startIndex);
 
         vk::CommandBuffer _commandBuffer;
         Pipeline _pipeline;

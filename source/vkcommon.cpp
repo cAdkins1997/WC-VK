@@ -4,6 +4,9 @@
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
+#define GLM_FORCE_RADIANS
+#define GLM_ENABLE_EXPERIMENTAL
+
 /*void* operator new [](size_t size, const char *name, int flags, unsigned debugFlags, const char *file, int line) {
     return new uint8_t[size];
 }

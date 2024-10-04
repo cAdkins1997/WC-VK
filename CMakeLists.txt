@@ -20,6 +20,10 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/vkcommon.cpp
         source/device/resources.h
         source/device/device.hpp
+        source/meshes.cpp
+        source/meshes.h
+        source/camera.cpp
+        source/camera.h
 )
 
 if (WIN32)
@@ -28,6 +32,8 @@ find_package(Vulkan REQUIRED)
 #find_package(include/simdjson-3.10.1)
 #find_package(include/fastgltf-0.8.0)
 #add_subdirectory(include/EASTL-3.21.23)
+add_subdirectory(include/simdjson-3.10.1)
+add_subdirectory(include/fastgltf-0.8.0)
 add_subdirectory(include/vk-bootstrap-main)
 add_subdirectory(include/glfw-3.4)
 
@@ -41,6 +47,8 @@ target_link_libraries(${PROJECT_NAME}
         glfw
         vk-bootstrap::vk-bootstrap
         Vulkan::Vulkan
+        fastgltf::fastgltf
+        simdjson::simdjson
         #EASTL
         #EABase
 )

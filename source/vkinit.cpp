@@ -102,7 +102,13 @@ VkImageSubresourceRange vkinit::subresource_range(
     uint32_t baseArrayLayer,
     uint32_t layerCount)
 {
-    return { imageAspectFlags, baseMipLevel, levelCount, baseArrayLayer, layerCount};
+    VkImageSubresourceRange subresourceRange;
+    subresourceRange.aspectMask = imageAspectFlags;
+    subresourceRange.baseMipLevel = baseMipLevel;
+    subresourceRange.levelCount = levelCount;
+    subresourceRange.baseArrayLayer = baseArrayLayer;
+    subresourceRange.layerCount = layerCount;
+    return subresourceRange;
 }
 
 VkDescriptorSetLayoutBindingFlagsCreateInfo vkinit::ds_layout_binding_flags_CI(

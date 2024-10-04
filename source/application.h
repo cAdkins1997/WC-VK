@@ -27,12 +27,16 @@ namespace wcvk {
         VkImage drawHandle{};
         vk::Extent2D drawImageExtent;
 
+        Image depthImage;
+        VkImage depthHandle{};
+
+        vk::RenderingAttachmentInfo drawAttachment;
+        vk::RenderingAttachmentInfo depthAttachment;
+
     private:
         core::Device device;
 
-        MeshBuffer meshBuffer{};
-        size_t vertSize{};
-        size_t indexSize{};
+        std::vector<std::shared_ptr<Mesh>> testMeshes;
     };
 }
 

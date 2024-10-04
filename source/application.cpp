@@ -2,6 +2,7 @@
 #include "application.h"
 #include <chrono>
 
+#include "meshes.h"
 #include "pipelines/graphicspipelines.h"
 
 namespace wcvk {
@@ -23,6 +24,9 @@ namespace wcvk {
         drawHandle = drawImage.get_handle();
         drawImageExtent.height = drawImage.get_height();
         drawImageExtent.width = drawImage.get_width();
+
+        depthImage = device.get_depth_image();
+        depthHandle = depthImage.get_handle();
 
         init_descriptors();
 
@@ -67,10 +71,10 @@ namespace wcvk {
 
         pipelineBuilder.set_cull_mode(vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise);
         pipelineBuilder.set_multisampling_none();
-        pipelineBuilder.disable_depthtest();
+        pipelineBuilder.enable_depthtest(true, vk::CompareOp::eGreaterOrEqual);
         pipelineBuilder.disable_blending();
         pipelineBuilder.set_color_attachment_format(device.drawImage.imageFormat);
-        pipelineBuilder.set_depth_format(vk::Format::eUndefined);
+        pipelineBuilder.set_depth_format(depthImage.get_format());
         trianglePipeline.pipeline = pipelineBuilder.build_pipeline(device.get_handle());
 
         device.get_handle().destroyShaderModule(vertShader.module);
@@ -83,6 +87,17 @@ namespace wcvk {
             device.get_handle().destroyPipeline(drawImagePipeline.pipeline);
         });
 
+        drawAttachment.imageView = drawImage.imageView;
+        drawAttachment.imageLayout = vk::ImageLayout::eColorAttachmentOptimal;
+        drawAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+        drawAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+
+        depthAttachment.imageView = depthImage.imageView;
+        depthAttachment.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal;
+        depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+        depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+        depthAttachment.clearValue.depthStencil.depth = 0.f;
+
         while (!glfwWindowShouldClose(device.window)) {
             glfwPollEvents();
             draw();
@@ -90,6 +105,10 @@ namespace wcvk {
     }
 
     void Application::draw() {
+        auto currentFrameTime = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrameTime - lastFrameTime;
+        lastFrameTime = currentFrameTime;
+
         device.wait_on_work();
 
         VkImage& currentSwapchainImage = device.get_swapchain_image();
@@ -98,6 +117,12 @@ namespace wcvk {
         }
 
         FrameData& currentFrame = device.get_current_frame();
+
+        core::process_input(device.window);
+
+        glm::mat4 projection = glm::perspective(glm::radians(core::camera.Zoom), static_cast<float>(device.width) / static_cast<float>(device.height), 0.1f, 100.0f);
+        glm::mat4 view = core::camera.get_view_matrix();
+        auto model = glm::mat4(1.0f);
 
         commands::ComputeContext computeContext(currentFrame.commandBuffer);
         computeContext.begin();
@@ -108,19 +133,23 @@ namespace wcvk {
         commands::GraphicsContext graphicsContext(currentFrame.commandBuffer);
 
         graphicsContext.image_barrier(drawHandle, vk::ImageLayout::eGeneral, vk::ImageLayout::eColorAttachmentOptimal);
-        vk::RenderingAttachmentInfo drawAttachment(drawImage.imageView, vk::ImageLayout::eColorAttachmentOptimal);
+        graphicsContext.image_barrier(depthHandle, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthAttachmentOptimal);
 
-        graphicsContext.set_up_render_pass(drawImageExtent, &drawAttachment, nullptr);
-        graphicsContext.bind_pipeline(trianglePipeline);
+        for (const auto& mesh : testMeshes) {
+            graphicsContext.set_up_render_pass(drawImageExtent, &drawAttachment, &depthAttachment);
+            graphicsContext.bind_pipeline(trianglePipeline);
 
-        graphicsContext.set_viewport(drawImageExtent, 0.0f, 1.0f);
-        graphicsContext.set_scissor(drawImageExtent);
+            graphicsContext.set_viewport(drawImageExtent, 0.0f, 1.0f);
+            graphicsContext.set_scissor(drawImageExtent);
 
-        PushConstants pushConstants {glm::mat4{1.0f}, meshBuffer.deviceAddress};
-        graphicsContext.set_push_constants(vk::ShaderStageFlagBits::eVertex, 0, pushConstants);
-        graphicsContext.bind_index_buffer(meshBuffer.indexBuffer.buffer);
-
-        graphicsContext.draw();
+            glm::vec3 lightPos{1.0f, cos(glfwGetTime() * 2), 5.0f};
+            PushConstants pushConstants {model, view, projection, lightPos, mesh->mesh.deviceAddress};
+            graphicsContext.set_push_constants(vk::ShaderStageFlagBits::eVertex, 0, pushConstants);
+            graphicsContext.bind_index_buffer(mesh->mesh.indexBuffer.buffer);
+            for (auto& surface : mesh->surfaces) {
+                graphicsContext.draw(surface.count, surface.startIndex);
+            }
+        }
 
         graphicsContext.image_barrier(drawHandle, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal);
         graphicsContext.image_barrier(currentSwapchainImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
@@ -134,30 +163,10 @@ namespace wcvk {
     }
 
     void Application::init_descriptors() {
-        std::array<Vertex, 4> vertices{};
-        vertices[0].position = {0.5,-0.5, 0};
-        vertices[1].position = {0.5,0.5, 0};
-        vertices[2].position = {-0.5,-0.5, 0};
-        vertices[3].position = {-0.5,0.5, 0};
-
-        vertices[0].color = {0,0, 0,1};
-        vertices[1].color = { 0.5,0.5,0.5 ,1};
-        vertices[2].color = { 1,0, 0,1 };
-        vertices[3].color = { 0,1, 0,1 };
-
-        std::array<uint32_t, 6> indices{};
-        indices[0] = 0;
-        indices[1] = 1;
-        indices[2] = 2;
-
-        indices[3] = 2;
-        indices[4] = 1;
-        indices[5] = 3;
-
         vk_check(device.get_handle().resetFences(1, &device.immediateFence), "Failed to reset fences");
         commands::UploadContext uploadContext(device.get_handle(), device.immediateCommandBuffer, device.allocator);
         uploadContext.begin();
-        meshBuffer = uploadContext.upload_mesh(vertices, indices);
+        testMeshes = meshes::loadGltfMeshes(R"(../assets/MetalRoughSpheres.glb)", uploadContext).value();
         uploadContext.end();
         device.submit_upload_work(uploadContext);
 
@@ -209,9 +218,9 @@ namespace wcvk {
             writer.update_set(device.device, trianglePipeline.set);
         }
 
-        device.primaryDeletionQueue.push_function([&]() {
+        /*device.primaryDeletionQueue.push_function([&]() {
             vmaDestroyBuffer(device.allocator, meshBuffer.vertexBuffer.buffer, meshBuffer.vertexBuffer.allocation);
             vmaDestroyBuffer(device.allocator, meshBuffer.indexBuffer.buffer, meshBuffer.indexBuffer.allocation);
-        });
+        });*/
     }
 }

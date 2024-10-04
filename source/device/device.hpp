@@ -3,6 +3,8 @@
 #include "resources.h"
 #include "../context.h"
 #include "../vkcommon.h"
+#include "../camera.h"
+
 #include <fstream>
 #include <VkBootstrap.h>
 #include <VkBootstrapDispatch.h>
@@ -22,6 +24,11 @@ namespace wcvk::commands {
 }
 
 namespace wcvk::core {
+    inline Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+
+    void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
+    void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+    void process_input(GLFWwindow *window);
 
 #ifdef NDEBUG
     static constexpr bool enableValidationLayers = false;
@@ -50,6 +57,7 @@ namespace wcvk::core {
         void present();
 
         Image& get_draw_image() { return drawImage; }
+        Image& get_depth_image() { return depthImage; }
         VkImage& get_swapchain_image();
 
     public:
@@ -64,7 +72,7 @@ namespace wcvk::core {
         vk::Instance instance;
         vk::DebugUtilsMessengerEXT debugMessenger;
 
-        uint32_t width = 1920, height = 1080;
+        uint32_t width = 2560, height = 1440;
         GLFWwindow* window;
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;
@@ -111,6 +119,7 @@ namespace wcvk::core {
         void init_sync_objects();
         void init_allocator();
         void init_descriptors();
-        void init_draw_images();;
+        void init_draw_images();
+        void init_depth_images();
     };
 }

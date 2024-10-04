@@ -88,7 +88,10 @@ struct Mesh {
 };
 
 struct PushConstants {
-    glm::mat4 worldMatrix;
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::vec3 lightPos;
     vk::DeviceAddress vertexBuffer;
 };
 

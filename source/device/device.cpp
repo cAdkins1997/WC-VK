@@ -2,6 +2,44 @@
 #include "device.hpp"
 
 namespace wcvk::core {
+    void mouse_callback(GLFWwindow *window, double xposIn, double yposIn) {
+        auto xpos = static_cast<float>(xposIn);
+        auto ypos = static_cast<float>(yposIn);
+
+        if (firstMouse)
+        {
+            lastX = xpos;
+            lastY = ypos;
+            firstMouse = false;
+        }
+
+        float xoffset = xpos - lastX;
+        float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+        lastX = xpos;
+        lastY = ypos;
+
+        camera.process_mouse_movement(xoffset, yoffset, false);
+    }
+
+    void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+        camera.process_mouse_scroll(static_cast<float>(yoffset));
+    }
+
+    void process_input(GLFWwindow *window) {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera.process_keyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera.process_keyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera.process_keyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera.process_keyboard(RIGHT, deltaTime);
+    }
+
     Buffer Device::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) const {
         VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         bufferInfo.pNext = nullptr;
@@ -147,7 +185,6 @@ namespace wcvk::core {
             1, &waitInfo,
             1, &commandBufferSI,
             1, &signalInfo);
-
         if (auto result = graphicsQueue.submit2(1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
             auto stringResult = vk::to_string(result);
             std::string string = "Failed to submit upload commands. Error: ";
@@ -238,6 +275,11 @@ namespace wcvk::core {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
             window = glfwCreateWindow(width, height, "Window Title", nullptr, nullptr);
+            glfwSetCursorPosCallback(window, mouse_callback);
+            glfwSetScrollCallback(window, scroll_callback);
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwMakeContextCurrent(window);
+
 
             vkb::InstanceBuilder builder;
             auto instantRet = builder.set_app_name("WCVK")
@@ -317,6 +359,7 @@ namespace wcvk::core {
             init_sync_objects();
             init_allocator();
             init_draw_images();
+            init_depth_images();
             init_descriptors();
         }
     }
@@ -387,7 +430,7 @@ namespace wcvk::core {
     void Device::init_draw_images() {
         VkExtent3D drawImageExtent = { width, height, 1 };
 
-        drawImage.imageFormat = static_cast<vk::Format>(VK_FORMAT_R16G16B16A16_SFLOAT);
+        drawImage.imageFormat = vk::Format::eR16G16B16A16Sfloat;
         drawImage.imageExtent = drawImageExtent;
 
          VkImageUsageFlags drawImageUsages{};
@@ -419,6 +462,58 @@ namespace wcvk::core {
         primaryDeletionQueue.push_function([this]() {
             device.destroyImageView(drawImage.imageView, nullptr);
             vmaDestroyImage(allocator, drawImage.image, drawImage.allocation);
+        });
+    }
+
+    void Device::init_depth_images() {
+        VkExtent3D depthImageExtent = { width, height, 1 };
+
+        depthImage.imageFormat = vk::Format::eD32Sfloat;
+        depthImage.imageExtent = depthImageExtent;
+
+        VkImageUsageFlags depthImageUsages{};
+        depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        VkImageCreateInfo dimg_info  = vkinit::image_create_info(static_cast<VkFormat>(depthImage.imageFormat), depthImageUsages, depthImageExtent);
+
+        VmaAllocationCreateInfo dimg_allocinfo = {};
+        dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        dimg_allocinfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        vk_check(
+            vmaCreateImage(allocator, &dimg_info, &dimg_allocinfo, &depthImage.image, &depthImage.allocation, nullptr),
+            "Failed to create depth image"
+            );
+
+        VkComponentMapping components {
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY
+        };
+
+        VkImageSubresourceRange subresourceRange;
+        subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        subresourceRange.baseMipLevel = 0;
+        subresourceRange.levelCount = 1;
+        subresourceRange.baseArrayLayer = 0;
+        subresourceRange.layerCount = 1;
+
+        VkImageViewCreateInfo imageViewCI{ .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        imageViewCI.image = depthImage.image;
+        imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewCI.format = VK_FORMAT_D32_SFLOAT;
+        imageViewCI.components = components;
+        imageViewCI.subresourceRange = subresourceRange;
+
+        vk_check(
+            vkCreateImageView(device, &imageViewCI, nullptr, reinterpret_cast<VkImageView*>(&depthImage.imageView)),
+            "Failed to create image view"
+        );
+
+        primaryDeletionQueue.push_function([this]() {
+            device.destroyImageView(depthImage.imageView, nullptr);
+            vmaDestroyImage(allocator, depthImage.image, depthImage.allocation);
         });
     }
 }
