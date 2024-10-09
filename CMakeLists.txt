@@ -24,6 +24,8 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/meshes.h
         source/camera.cpp
         source/camera.h
+        source/frustum.cpp
+        source/frustum.h
 )
 
 if (WIN32)
@@ -63,6 +65,8 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
         "shaders/*.frag"
         "shaders/*.vert"
         "shaders/*.comp"
+        "shaders/*.task"
+        "shaders/*.mesh"
 )
 
 foreach(GLSL ${GLSL_SOURCE_FILES})

@@ -198,8 +198,6 @@ namespace wcvk::commands {
     vk::PipelineStageFlagBits2::eAllCommands,vk::AccessFlagBits2::eMemoryWrite,
     vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead
     );
-
-
         imageBarrier.oldLayout = currentLayout;
         imageBarrier.newLayout = newLayout;
 
@@ -276,6 +274,66 @@ namespace wcvk::commands {
         _commandBuffer.end();
     }
 
+    void UploadContext::image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout) {
+
+        vk::ImageMemoryBarrier2 imageBarrier(
+vk::PipelineStageFlagBits2::eAllCommands,vk::AccessFlagBits2::eMemoryWrite,
+vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead
+        );
+
+        imageBarrier.oldLayout = currentLayout;
+        imageBarrier.newLayout = newLayout;
+
+        vk::ImageAspectFlags aspectMask = (newLayout == vk::ImageLayout::eAttachmentOptimal) ? vk::ImageAspectFlagBits::eDepth : vk::ImageAspectFlagBits::eColor;
+        imageBarrier.subresourceRange = vk::ImageSubresourceRange(
+            aspectMask,
+            0,
+            vk::RemainingMipLevels,
+            0,
+            vk::RemainingArrayLayers
+            );
+        imageBarrier.image = image;
+
+        vk::DependencyInfo dependencyInfo;
+        dependencyInfo.imageMemoryBarrierCount = 1;
+        dependencyInfo.pImageMemoryBarriers = &imageBarrier;
+        _commandBuffer.pipelineBarrier2(&dependencyInfo);
+    }
+
+    void UploadContext::copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {
+        vk::ImageBlit2 blitRegion;
+
+        blitRegion.srcOffsets[1].x = srcSize.width;
+        blitRegion.srcOffsets[1].y = srcSize.height;
+        blitRegion.srcOffsets[1].z = 1;
+
+        blitRegion.dstOffsets[1].x = dstSize.width;
+        blitRegion.dstOffsets[1].y = dstSize.height;
+        blitRegion.dstOffsets[1].z = 1;
+
+        blitRegion.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+        blitRegion.srcSubresource.baseArrayLayer = 0;
+        blitRegion.srcSubresource.layerCount = 1;
+        blitRegion.srcSubresource.mipLevel = 0;
+
+        blitRegion.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+        blitRegion.dstSubresource.baseArrayLayer = 0;
+        blitRegion.dstSubresource.layerCount = 1;
+        blitRegion.dstSubresource.mipLevel = 0;
+
+        vk::BlitImageInfo2 blitInfo(
+            src,
+            vk::ImageLayout::eTransferSrcOptimal,
+            dst,
+            vk::ImageLayout::eTransferDstOptimal,
+            1,
+            &blitRegion,
+            vk::Filter::eLinear
+            );
+
+        _commandBuffer.blitImage2(&blitInfo);
+    }
+
     MeshBuffer UploadContext::upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices) {
         const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
         const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
@@ -303,6 +361,31 @@ namespace wcvk::commands {
         _commandBuffer.copyBuffer(stagingBuffer.buffer, newMesh.indexBuffer.buffer, 1, &indexCopy);
 
         return newMesh;
+    }
+
+    void UploadContext::upload_image(void* data, Image &image) {
+        vk::Extent3D extent = image.get_extent();
+        size_t imageDataSize = extent.depth * extent.width * extent.height * 4;
+
+        Buffer stagingBuffer = make_staging_buffer(imageDataSize);
+
+        memcpy(stagingBuffer.info.pMappedData, data, imageDataSize);
+
+        image_barrier(image.image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+
+        vk::BufferImageCopy copyRegion{};
+        copyRegion.bufferOffset = 0;
+        copyRegion.bufferRowLength = 0;
+        copyRegion.bufferImageHeight = 0;
+        copyRegion.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+        copyRegion.imageSubresource.mipLevel = 0;
+        copyRegion.imageSubresource.baseArrayLayer = 0;
+        copyRegion.imageSubresource.layerCount = 1;
+        copyRegion.imageExtent = extent;
+
+        _commandBuffer.copyBufferToImage(stagingBuffer.buffer, image.image, vk::ImageLayout::eTransferDstOptimal, 1, &copyRegion);
+
+        image_barrier(image.image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
     }
 
     Buffer UploadContext::make_staging_buffer(size_t allocSize) {

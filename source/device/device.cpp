@@ -316,6 +316,9 @@ namespace wcvk::core {
                 require_dedicated_transfer_queue().
                 set_required_features_12(features12).
                 set_required_features_13(features13).
+                add_required_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME).
+                add_required_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME).
+                add_required_extension("VK_EXT_mesh_shader").
                 select();
 
             surface = vk::SurfaceKHR(tempSurface);

@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 
+#include "../frustum.h"
 #include "../vkcommon.h"
 #include "../pipelines/descriptors.h"
 
@@ -106,8 +107,14 @@ struct Pipeline {
     vk::DescriptorSetLayout descriptorLayout;
 };
 
-struct ProjectionData {
+struct SceneData {
+    glm::mat4 model;
     glm::mat4 view;
-    glm::mat4 proj;
-    glm::mat4 viewproj;
+    glm::mat4 perspective;
+    wcvk::Frustum frustum;
+};
+
+struct Plane {
+    glm::vec3 normal {0.0f, 1.0f, 0.0f};
+    float distance = 0.0f;
 };

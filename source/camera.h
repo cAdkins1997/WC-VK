@@ -31,20 +31,20 @@ namespace wcvk {
         glm::vec3 Up{};
         glm::vec3 Right{};
         glm::vec3 WorldUp{};
-        float Yaw;
-        float Pitch;
-        float MovementSpeed;
-        float MouseSensitivity;
-        float Zoom;
+        float yaw;
+        float pitch;
+        float movementSpeed;
+        float mouseSensitivity;
+        float zoom;
 
         explicit Camera(
             glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
-            float yaw = YAW,
-            float pitch = PITCH
+            float _yaw = YAW,
+            float _pitch = PITCH
             );
 
-        Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
+        Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float _yaw, float _pitch);
 
         [[nodiscard]] glm::mat4 get_view_matrix() const;
 

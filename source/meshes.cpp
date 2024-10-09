@@ -59,8 +59,7 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
                     });
             }
 
-            auto normals = primitive.findAttribute("NORMAL");
-            if (normals != primitive.attributes.end()) {
+            if (auto normals = primitive.findAttribute("NORMAL"); normals != primitive.attributes.end()) {
                 auto accessorIndex = (normals)->accessorIndex;
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(gltf, gltf.accessors[accessorIndex],
                     [&](glm::vec3 v, size_t index) {
@@ -68,8 +67,7 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
                     });
             }
 
-            auto uv = primitive.findAttribute("TEXCOORD_0");
-            if (uv != primitive.attributes.end()) {
+            if (auto uv = primitive.findAttribute("TEXCOORD_0"); uv != primitive.attributes.end()) {
                 auto accessorIndex = (uv)->accessorIndex;
                 fastgltf::iterateAccessorWithIndex<glm::vec2>(gltf, gltf.accessors[accessorIndex],
                     [&](glm::vec2 v, size_t index) {
@@ -78,8 +76,7 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
                     });
             }
 
-            auto colors = primitive.findAttribute("COLOR_0");
-            if (colors != primitive.attributes.end()) {
+            if (auto colors = primitive.findAttribute("COLOR_0"); colors != primitive.attributes.end()) {
                 auto accessorIndex = (colors)->accessorIndex;
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(gltf, gltf.accessors[accessorIndex],
                     [&](glm::vec4 v, size_t index) {
@@ -89,8 +86,7 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
 
             newMesh.surfaces.push_back(newSurface);
         }
-        constexpr bool OverrideColors = false;
-        if (OverrideColors) {
+        if constexpr (constexpr bool OverrideColors = false) {
             for (Vertex& vtx : vertices) {
                 vtx.color = glm::vec4(vtx.normal, 1.f);
             }

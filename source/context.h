@@ -70,9 +70,13 @@ namespace wcvk::commands {
         void begin();
         void end();
 
+        void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout);
+        void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
+
         MeshBuffer upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices);
 
         void upload_texture();
+        void upload_image(void* data, Image& image);
 
     private:
         Buffer make_staging_buffer(size_t allocSize);

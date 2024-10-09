@@ -82,7 +82,7 @@ void PipelineBuilder::set_depth_format(vk::Format format) {
     renderInfo.depthAttachmentFormat = format;
 }
 
-void PipelineBuilder::enable_depthtest(bool depthWriteEnable, vk::CompareOp op) {
+void PipelineBuilder::enable_depthtest(vk::Bool32 depthWriteEnable, vk::CompareOp op) {
     depthStencil.depthTestEnable = vk::True;
     depthStencil.depthWriteEnable = depthWriteEnable;
     depthStencil.depthCompareOp = op;
@@ -100,6 +100,30 @@ void PipelineBuilder::disable_depthtest() {
     depthStencil.stencilTestEnable = vk::False;
     depthStencil.minDepthBounds = 0.f;
     depthStencil.maxDepthBounds = 1.f;
+}
+
+void PipelineBuilder::enable_blending_additive() {
+    vk::ColorComponentFlags colorComponent = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    colorBlendAttachment.colorWriteMask = colorComponent;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrc1Alpha;
+    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOne;
+    colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
+    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
+}
+
+void PipelineBuilder::enable_blending_alphablend() {
+    vk::ColorComponentFlags colorComponent = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    colorBlendAttachment.colorWriteMask = colorComponent;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
+    colorBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    colorBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    colorBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 }
 
 void PipelineBuilder::disable_blending() {

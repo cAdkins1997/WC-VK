@@ -7,6 +7,8 @@
 
 #include "pipelines/descriptors.h"
 
+#include "frustum.h"
+
 namespace wcvk {
     class Application {
     public:
@@ -29,6 +31,8 @@ namespace wcvk {
 
         Image depthImage;
         VkImage depthHandle{};
+
+        Buffer sceneData;
 
         vk::RenderingAttachmentInfo drawAttachment;
         vk::RenderingAttachmentInfo depthAttachment;

@@ -28,6 +28,8 @@ namespace wcvk {
         depthImage = device.get_depth_image();
         depthHandle = depthImage.get_handle();
 
+        sceneData = device.create_buffer(sizeof(Frustum), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
         init_descriptors();
 
         vk::PipelineLayoutCreateInfo drawImagePipelineLayoutCI;
@@ -71,7 +73,7 @@ namespace wcvk {
 
         pipelineBuilder.set_cull_mode(vk::CullModeFlagBits::eNone, vk::FrontFace::eClockwise);
         pipelineBuilder.set_multisampling_none();
-        pipelineBuilder.enable_depthtest(true, vk::CompareOp::eGreaterOrEqual);
+        pipelineBuilder.enable_depthtest(vk::True, vk::CompareOp::eGreaterOrEqual);
         pipelineBuilder.disable_blending();
         pipelineBuilder.set_color_attachment_format(device.drawImage.imageFormat);
         pipelineBuilder.set_depth_format(depthImage.get_format());
@@ -120,9 +122,13 @@ namespace wcvk {
 
         core::process_input(device.window);
 
-        glm::mat4 projection = glm::perspective(glm::radians(core::camera.Zoom), static_cast<float>(device.width) / static_cast<float>(device.height), 0.1f, 100.0f);
-        glm::mat4 view = core::camera.get_view_matrix();
         auto model = glm::mat4(1.0f);
+        glm::mat4 view = core::camera.get_view_matrix();
+        glm::mat4 pespective = glm::perspective(glm::radians(core::camera.zoom), static_cast<float>(device.width) / static_cast<float>(device.height), 10000.f, 0.1f);
+
+        Frustum frustum = compute_frustum(view);
+
+        SceneData{model, view, pespective, frustum};
 
         commands::ComputeContext computeContext(currentFrame.commandBuffer);
         computeContext.begin();
@@ -139,6 +145,7 @@ namespace wcvk {
             graphicsContext.set_up_render_pass(drawImageExtent, &drawAttachment, &depthAttachment);
             graphicsContext.bind_pipeline(trianglePipeline);
 
+            vk::Extent2D viewportExtent{drawImageExtent.width, -drawImageExtent.height};
             graphicsContext.set_viewport(drawImageExtent, 0.0f, 1.0f);
             graphicsContext.set_scissor(drawImageExtent);
 
@@ -172,7 +179,7 @@ namespace wcvk {
 
         std::vector<DescriptorAllocator::PoolSizeRatio> sizes {
                 { vk::DescriptorType::eStorageBuffer, 3 },
-                { vk::DescriptorType::eUniformBuffer, 3 },
+                { vk::DescriptorType::eUniformBufferDynamic, 3 },
                 { vk::DescriptorType::eCombinedImageSampler, 4 }
         };
 
@@ -209,12 +216,14 @@ namespace wcvk {
         {
             DescriptorLayoutBuilder builder;
             builder.add_binding(0, vk::DescriptorType::eStorageImage);
-            trianglePipeline.descriptorLayout = builder.build(device.device, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
+            builder.add_binding(1, vk::DescriptorType::eUniformBufferDynamic);
+            trianglePipeline.descriptorLayout = builder.build(device.get_handle(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
 
             trianglePipeline.set = descriptorAllocator.allocate(device.device, trianglePipeline.descriptorLayout);
 
             DescriptorWriter writer;
             writer.write_image(0, device.drawImage.imageView, nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
+            writer.write_buffer(1, sceneData.buffer, sizeof(SceneData), 0, vk::DescriptorType::eUniformBufferDynamic);
             writer.update_set(device.device, trianglePipeline.set);
         }
 
