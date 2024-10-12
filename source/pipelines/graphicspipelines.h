@@ -1,5 +1,7 @@
 
 #pragma once
+#include "../glmdefines.h"
+
 #include <vector>
 #include "../vkcommon.h"
 #include "../device/resources.h"

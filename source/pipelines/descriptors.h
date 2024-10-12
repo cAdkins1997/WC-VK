@@ -1,5 +1,7 @@
 
 #pragma once
+#include "../glmdefines.h"
+
 #include "../vkcommon.h"
 #include <vector>
 #include <span>

@@ -5,7 +5,8 @@
 #include <memory>
 #include <filesystem>
 
-#define GLM_ENABLE_EXPERIMENTAL
+#include "glmdefines.h"
+
 #include <glm/gtx/quaternion.hpp>
 
 #include <fastgltf/core.hpp>
@@ -14,6 +15,7 @@
 #include <fastgltf/glm_element_traits.hpp>
 #include <fastgltf/base64.hpp>
 #include <fastgltf/util.hpp>
+
 
 #include "context.h"
 #include "device/resources.h"

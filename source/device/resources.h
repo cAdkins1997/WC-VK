@@ -1,5 +1,8 @@
 
 #pragma once
+
+#include "../glmdefines.h"
+
 #include <vector>
 #include <string>
 #include <functional>
@@ -42,6 +45,9 @@ struct Buffer {
     VkBuffer buffer;
     VmaAllocation allocation;
     VmaAllocationInfo info;
+    VkMemoryPropertyFlags memoryProperties;
+
+    [[nodiscard]] void* get_mapped_data() const { return info.pMappedData; }
 };
 
 struct Image {
@@ -89,10 +95,6 @@ struct Mesh {
 };
 
 struct PushConstants {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
-    glm::vec3 lightPos;
     vk::DeviceAddress vertexBuffer;
 };
 
@@ -112,6 +114,7 @@ struct SceneData {
     glm::mat4 view;
     glm::mat4 perspective;
     wcvk::Frustum frustum;
+    glm::vec3 lightPos;
 };
 
 struct Plane {

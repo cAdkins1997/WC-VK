@@ -26,6 +26,7 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/camera.h
         source/frustum.cpp
         source/frustum.h
+        source/glmdefines.h
 )
 
 if (WIN32)
@@ -65,8 +66,8 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
         "shaders/*.frag"
         "shaders/*.vert"
         "shaders/*.comp"
-        "shaders/*.task"
-        "shaders/*.mesh"
+        #"shaders/*.task"
+        #"shaders/*.mesh"
 )
 
 foreach(GLSL ${GLSL_SOURCE_FILES})
@@ -77,7 +78,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     add_custom_command(
             OUTPUT ${SPIRV}
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
-            COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
+            COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV} -g
             DEPENDS ${GLSL})
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
 endforeach(GLSL)

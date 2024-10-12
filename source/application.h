@@ -1,6 +1,7 @@
 
 #ifndef APPLICATION_H
 #define APPLICATION_H
+#include "glmdefines.h"
 
 #include "device/device.hpp"
 #include "context.h"
@@ -32,7 +33,7 @@ namespace wcvk {
         Image depthImage;
         VkImage depthHandle{};
 
-        Buffer sceneData;
+        Buffer sceneDataBuffer;
 
         vk::RenderingAttachmentInfo drawAttachment;
         vk::RenderingAttachmentInfo depthAttachment;

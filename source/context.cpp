@@ -262,7 +262,7 @@ namespace wcvk::commands {
     }
 
     UploadContext::UploadContext(const vk::Device& device, const vk::CommandBuffer &commandBuffer, const VmaAllocator& allocator) :
-    _device(device), _allocator(allocator), _commandBuffer(commandBuffer) {}
+    _device(device) ,_allocator(allocator), _commandBuffer(commandBuffer) {}
 
     void UploadContext::begin() {
         _commandBuffer.reset();
@@ -298,6 +298,45 @@ vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk
         dependencyInfo.imageMemoryBarrierCount = 1;
         dependencyInfo.pImageMemoryBarriers = &imageBarrier;
         _commandBuffer.pipelineBarrier2(&dependencyInfo);
+    }
+
+    void UploadContext::buffer_barrier(
+        vk::Buffer buffer,
+        vk::DeviceSize offset,
+        vk::PipelineStageFlags srcStageFlags,
+        vk::AccessFlags srcAccessMask,
+        vk::PipelineStageFlags dstStageFlags,
+        vk::AccessFlags dstAccessMask) const
+    {
+        vk::BufferMemoryBarrier barrier(srcAccessMask, dstAccessMask);
+        barrier.buffer = buffer;
+        barrier.offset = offset;
+        barrier.size = vk::WholeSize;
+        barrier.srcQueueFamilyIndex = vk::QueueFamilyIgnored;
+        barrier.dstQueueFamilyIndex = vk::QueueFamilyIgnored;
+
+        _commandBuffer.pipelineBarrier(
+            srcStageFlags,
+            dstStageFlags,
+            {},
+            0,
+            nullptr,
+            1,
+            &barrier,
+            0,
+            nullptr
+            );
+    }
+
+    void UploadContext::copy_buffer(
+        vk::Buffer bufferSrc,
+        vk::Buffer bufferDst,
+        vk::DeviceSize srcOffset,
+        vk::DeviceSize dstOffset,
+        vk::DeviceSize dataSize)
+    {
+        vk::BufferCopy bufferCopy {srcOffset, dstOffset, dataSize};
+        _commandBuffer.copyBuffer(bufferSrc, bufferDst, 1, &bufferCopy);
     }
 
     void UploadContext::copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize) {
@@ -386,6 +425,53 @@ vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk
         _commandBuffer.copyBufferToImage(stagingBuffer.buffer, image.image, vk::ImageLayout::eTransferDstOptimal, 1, &copyRegion);
 
         image_barrier(image.image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+    }
+
+    void UploadContext::upload_uniform(void* data, size_t dataSize, Buffer &uniform) {
+        if (uniform.memoryProperties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+            memcpy(uniform.get_mapped_data(), data, dataSize);
+            vk_check(
+                vmaFlushAllocation(_allocator, uniform.allocation, 0, VK_WHOLE_SIZE),
+                "Failed to flush buffer"
+                );
+
+            buffer_barrier(
+                uniform.buffer,
+                0,
+                vk::PipelineStageFlagBits::eHost,
+                vk::AccessFlagBits::eHostWrite,
+                vk::PipelineStageFlagBits::eTransfer,
+                vk::AccessFlagBits::eTransferRead
+            );
+        }
+        else {
+            Buffer stagingBuffer = make_staging_buffer(dataSize);
+            memcpy(stagingBuffer.get_mapped_data(), data, dataSize);
+            vk_check(
+            vmaFlushAllocation(_allocator, uniform.allocation, 0, VK_WHOLE_SIZE),
+            "Failed to flush buffer"
+            );
+
+            buffer_barrier(
+                stagingBuffer.buffer,
+                0,
+                vk::PipelineStageFlagBits::eHost,
+                vk::AccessFlagBits::eHostWrite,
+                vk::PipelineStageFlagBits::eTransfer,
+                vk::AccessFlagBits::eTransferRead
+            );
+
+            copy_buffer(stagingBuffer.buffer, uniform.buffer, 0, 0, dataSize);
+
+            buffer_barrier(
+                uniform.buffer,
+                0,
+                vk::PipelineStageFlagBits::eTransfer,
+                vk::AccessFlagBits::eTransferWrite,
+                vk::PipelineStageFlagBits::eVertexShader,
+                vk::AccessFlagBits::eUniformRead
+            );
+        }
     }
 
     Buffer UploadContext::make_staging_buffer(size_t allocSize) {

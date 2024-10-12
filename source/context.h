@@ -1,5 +1,6 @@
 
 #pragma once
+#include "glmdefines.h"
 #include "vkinit.h"
 #include <iostream>
 
@@ -71,12 +72,23 @@ namespace wcvk::commands {
         void end();
 
         void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout);
+        void buffer_barrier(
+            vk::Buffer buffer,
+            vk::DeviceSize offset,
+            vk::PipelineStageFlags srcStageFlags,
+            vk::AccessFlags srcAccessMask,
+            vk::PipelineStageFlags dstStageFlags,
+            vk::AccessFlags dstAccessMask
+            ) const;
+
+        void copy_buffer(vk::Buffer bufferSrc, vk::Buffer bufferDst, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset, vk::DeviceSize dataSize);
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
 
         MeshBuffer upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices);
 
         void upload_texture();
         void upload_image(void* data, Image& image);
+        void upload_uniform(void* data, size_t dataSize, Buffer& uniform);
 
     private:
         Buffer make_staging_buffer(size_t allocSize);

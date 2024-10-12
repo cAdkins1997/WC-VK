@@ -2,6 +2,7 @@
 #ifndef VKINIT_H
 #define VKINIT_H
 
+#include "glmdefines.h"
 #include "vkcommon.h"
 
 namespace vkinit {

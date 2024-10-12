@@ -2,6 +2,9 @@
 #include <glm/glm.hpp>
 #include <array>
 
+#include "glmdefines.h"
+
+
 namespace wcvk {
     typedef glm::vec4 Plane;
     typedef std::array<Plane, 6> Frustum;

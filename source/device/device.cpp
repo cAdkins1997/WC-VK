@@ -40,7 +40,7 @@ namespace wcvk::core {
             camera.process_keyboard(RIGHT, deltaTime);
     }
 
-    Buffer Device::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) const {
+    Buffer Device::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) const {
         VkBufferCreateInfo bufferInfo = {.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         bufferInfo.pNext = nullptr;
         bufferInfo.size = allocSize;
@@ -50,10 +50,12 @@ namespace wcvk::core {
 
         VmaAllocationCreateInfo vmaallocInfo = {};
         vmaallocInfo.usage = memoryUsage;
-        vmaallocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        vmaallocInfo.flags = flags;
         Buffer newBuffer{};
 
         vmaCreateBuffer(allocator, &bufferInfo, &vmaallocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info);
+
+        vmaGetAllocationMemoryProperties(allocator, newBuffer.allocation, &newBuffer.memoryProperties);
 
         return newBuffer;
     }
@@ -95,6 +97,18 @@ namespace wcvk::core {
 
         images.push_back(newImage);
         return images.end().base();
+    }
+
+    vk::Sampler Device::create_sampler(vk::Filter minFilter, vk::Filter magFilter) {
+        vk::SamplerCreateInfo samplerCI;
+        samplerCI.minFilter = minFilter;
+        samplerCI.magFilter = magFilter;
+        vk::Sampler newSampler;
+        vk_check(
+            device.createSampler(&samplerCI, nullptr, &newSampler),
+            "failed to create sampler"
+            );
+        return newSampler;
     }
 
     Shader Device::create_shader(std::string_view filePath) const {
@@ -462,7 +476,13 @@ namespace wcvk::core {
 
         vkCreateImageView(device, &viewInfo, nullptr, reinterpret_cast<VkImageView*>(&drawImage.imageView));
 
+        drawImageSamplerLinear = create_sampler(vk::Filter::eLinear, vk::Filter::eLinear);
+        drawImageSamplerNearest = create_sampler(vk::Filter::eNearest, vk::Filter::eNearest);
+
         primaryDeletionQueue.push_function([this]() {
+            device.destroySampler(drawImageSamplerNearest, nullptr);
+            device.destroySampler(drawImageSamplerLinear, nullptr);
+
             device.destroyImageView(drawImage.imageView, nullptr);
             vmaDestroyImage(allocator, drawImage.image, drawImage.allocation);
         });

@@ -1,5 +1,8 @@
 
 #pragma once
+
+#include "../glmdefines.h"
+
 #include "resources.h"
 #include "../context.h"
 #include "../vkcommon.h"
@@ -41,8 +44,13 @@ namespace wcvk::core {
     class Device {
 
     public:
-        [[nodiscard]] Buffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage) const;
+        [[nodiscard]] Buffer create_buffer(
+            size_t allocSize,
+            VkBufferUsageFlags usage,
+            VmaMemoryUsage memoryUsage,
+            VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT) const;
         [[nodiscard]] Image* create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped);
+        [[nodiscard]] vk::Sampler create_sampler(vk::Filter minFilter, vk::Filter magFilter);
         [[nodiscard]] Shader create_shader(std::string_view filePath) const;
 
         void submit_graphics_work(const commands::GraphicsContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
@@ -85,8 +93,11 @@ namespace wcvk::core {
         uint32_t frameNumber = 0;
         bool resizeRequested = false;
 
-        Image depthImage;
         Image drawImage;
+        vk::Sampler drawImageSamplerNearest;
+        vk::Sampler drawImageSamplerLinear;
+
+        Image depthImage;
 
         uint32_t graphicsQueueIndex, computeQueueIndex, presentQueueIndex{}, transferQueueIndex;
         vk::Queue graphicsQueue, computeQueue, presentQueue, transferQueue;

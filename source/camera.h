@@ -1,4 +1,5 @@
 #pragma once
+#include "glmdefines.h"
 #include "vkcommon.h"
 #include <GLFW/glfw3.h>
 
