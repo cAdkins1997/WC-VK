@@ -48,6 +48,17 @@ void PipelineBuilder::set_shader(vk::ShaderModule vertexShader, vk::ShaderModule
     shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, vertexShader, "main"));
 }
 
+void PipelineBuilder::set_shader(
+    vk::ShaderModule taskShader,
+    vk::ShaderModule meshShader,
+    vk::ShaderModule fragmentShader)
+{
+    shaderStages.clear();
+    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eTaskEXT, taskShader, "main"));
+    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eMeshEXT, meshShader, "main"));
+    shaderStages.push_back(vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, fragmentShader, "main"));
+}
+
 void PipelineBuilder::set_input_topology(vk::PrimitiveTopology topology) {
     inputAssembly.topology = topology;
     inputAssembly.primitiveRestartEnable = vk::False;

@@ -131,7 +131,12 @@ namespace wcvk {
 
         auto model = glm::mat4(1.0f);
         glm::mat4 view = core::camera.get_view_matrix();
-        glm::mat4 perspective = glm::perspective(glm::radians(core::camera.zoom), static_cast<float>(device.width) / static_cast<float>(device.height), 10000.f, 0.1f);
+        glm::mat4 perspective = glm::perspective(
+            glm::radians(core::camera.zoom),
+            static_cast<float>(device.width) / static_cast<float>(device.height),
+            10000.f,
+            0.1f
+            );
 
         Frustum frustum = compute_frustum(view);
 

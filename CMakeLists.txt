@@ -27,6 +27,8 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/frustum.cpp
         source/frustum.h
         source/glmdefines.h
+        source/scenegraph.cpp
+        source/scenegraph.h
 )
 
 if (WIN32)
@@ -78,7 +80,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     add_custom_command(
             OUTPUT ${SPIRV}
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
-            COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV} -g
+            COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV} -g -fspv-extension=SPV_EXT_mesh_shader
             DEPENDS ${GLSL})
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
 endforeach(GLSL)

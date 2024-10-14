@@ -14,6 +14,7 @@ public:
     vk::Pipeline build_pipeline(vk::Device device);
 
     void set_shader(vk::ShaderModule vertexShader, vk::ShaderModule fragmentShader);
+    void set_shader(vk::ShaderModule taskShader, vk::ShaderModule meshShader, vk::ShaderModule fragmentShader);
     void set_input_topology(vk::PrimitiveTopology topology);
     void set_polygon_mode(vk::PolygonMode mode);
     void set_cull_mode(vk::CullModeFlags cullMode, vk::FrontFace frontFace);

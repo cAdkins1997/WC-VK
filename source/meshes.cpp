@@ -98,3 +98,27 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
 
     return meshes;
 }
+
+/*std::optional<std::shared_ptr<Mesh>> wcvk::meshes::load_mesh(
+    const std::filesystem::path &filePath,
+    commands::UploadContext &context)
+{
+    fastgltf::Parser parser;
+
+    auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
+    if (data.error() != fastgltf::Error::None) {
+        throw std::runtime_error("Failed to read glTF file");
+    }
+    auto asset = parser.loadGltf(data.get(), filePath.parent_path());
+    if (auto error = asset.error(); error != fastgltf::Error::None) {
+        throw std::runtime_error("failed to read GLTF buffer");
+    }
+
+    std::vector<std::shared_ptr<Mesh>> meshes;
+    std::vector<uint32_t> indices;
+    std::vector<Vertex> vertices;
+    fastgltf::Asset& gltf = asset.get();
+
+    for
+}
+*/
