@@ -1,7 +1,7 @@
 
 #include "scenegraph.h"
 
-/*scenes::Node::Node(Mesh* _mesh) : mesh(_mesh){}
+scenes::Node::Node(Mesh* _mesh) : mesh(_mesh){}
 
 scenes::Node::~Node() {
     for (auto child : children) {
@@ -68,4 +68,3 @@ glm::mat4 scenes::Transform::get_model_mat() const {
 
     return glm::translate(glm::mat4{1.0f}, pos) * rotationMatrix * glm::scale(glm::mat4{1.0f}, scale);
 }
-*/

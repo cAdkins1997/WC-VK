@@ -8,7 +8,7 @@
 
 #include <glm/gtx/quaternion.hpp>
 
-/*namespace scenes {
+namespace scenes {
 
     struct  Transform {
         glm::vec3 pos{};
@@ -47,7 +47,7 @@
 
         std::vector<vk::Sampler> samplers;
         DescriptorAllocator descriptorPool;
-        Buffer materialBuffer;
+        Buffer materialBuffer{};
     };
 
 
@@ -82,4 +82,4 @@
         }
 
     }
-}*/
+}
