@@ -23,6 +23,8 @@
 namespace wcvk::meshes {
     std::optional<std::vector<std::shared_ptr<Mesh>>> loadGltfMeshes(const std::filesystem::path& filePath, commands::UploadContext& context);
     std::optional<std::shared_ptr<Mesh>> load_mesh(const std::filesystem::path& filePath, commands::UploadContext& context);
+
+    std::optional<GLTFData> load_gltf(const std::filesystem::path& filePath, commands::UploadContext& context);
 }
 
 #endif //MESHES_H

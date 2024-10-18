@@ -189,6 +189,12 @@ namespace wcvk {
         commands::UploadContext uploadContext(device.get_handle(), device.immediateCommandBuffer, device.allocator);
         uploadContext.begin();
         testMeshes = meshes::loadGltfMeshes(R"(../assets/MetalRoughSpheres.glb)", uploadContext).value();
+
+        GLTFData meshes{};
+        if (auto data = meshes::load_gltf(R"(../assets/DamagedHelmet.glb)", uploadContext); data.has_value()) {
+            meshes = data.value();
+        }
+
         uploadContext.end();
         device.submit_upload_work(uploadContext);
 

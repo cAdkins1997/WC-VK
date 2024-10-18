@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <memory>
 
 #include "../frustum.h"
 #include "../vkcommon.h"
@@ -94,6 +95,12 @@ struct Mesh {
     MeshBuffer mesh;
 };
 
+struct Material {
+    std::string name{};
+    glm::vec4 baseColorFactors{};
+    glm::vec4 mrFactors{};
+};
+
 struct PushConstants {
     vk::DeviceAddress vertexBuffer;
 };
@@ -107,6 +114,12 @@ struct Pipeline {
     vk::PipelineLayout pipelineLayout;
     vk::DescriptorSet set;
     vk::DescriptorSetLayout descriptorLayout;
+};
+
+struct GLTFData {
+    Pipeline pipeline;
+    std::vector<std::shared_ptr<Material>> materials;
+    std::vector<std::shared_ptr<Mesh>> meshes;
 };
 
 struct SceneData {
