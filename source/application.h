@@ -33,10 +33,10 @@ namespace wcvk {
         Image depthImage;
         VkImage depthHandle{};
 
-        Buffer sceneDataBuffer;
-
         vk::RenderingAttachmentInfo drawAttachment;
         vk::RenderingAttachmentInfo depthAttachment;
+
+        Buffer sceneDataBuffer;
 
     private:
         core::Device device;

@@ -140,7 +140,7 @@ namespace wcvk {
 
         Frustum frustum = compute_frustum(view);
 
-        glm::vec3 lightPos{1.0f, cos(glfwGetTime() * 2), 5.0f};
+        glm::vec3 lightPos{cos(glfwGetTime()) * 20, sin(glfwGetTime()) * 15, 5.0f};
 
         SceneData sceneData{model, view, perspective, frustum, lightPos};
 
@@ -191,7 +191,8 @@ namespace wcvk {
         testMeshes = meshes::loadGltfMeshes(R"(../assets/MetalRoughSpheres.glb)", uploadContext).value();
 
         GLTFData meshes{};
-        if (auto data = meshes::load_gltf(R"(../assets/DamagedHelmet.glb)", uploadContext); data.has_value()) {
+        auto ctx = device.build_vcktx(Graphics, device.immediateCommandPool);
+        if (auto data = meshes::load_gltf(device, R"(../assets/DamagedHelmet.glb)", uploadContext, ctx); data.has_value()) {
             meshes = data.value();
         }
 

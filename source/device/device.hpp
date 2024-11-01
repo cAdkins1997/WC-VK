@@ -49,7 +49,7 @@ namespace wcvk::core {
             VkBufferUsageFlags usage,
             VmaMemoryUsage memoryUsage,
             VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT) const;
-        [[nodiscard]] Image* create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped);
+        [[nodiscard]] Image create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped);
         [[nodiscard]] vk::Sampler create_sampler(vk::Filter minFilter, vk::Filter magFilter);
         [[nodiscard]] Shader create_shader(std::string_view filePath) const;
 
@@ -67,6 +67,8 @@ namespace wcvk::core {
         Image& get_draw_image() { return drawImage; }
         Image& get_depth_image() { return depthImage; }
         VkImage& get_swapchain_image();
+
+        [[nodiscard]] vkctx build_vcktx(QueueType queueType, vk::CommandPool commandPool) const;
 
     public:
         Device();

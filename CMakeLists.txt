@@ -35,6 +35,8 @@ find_package(Vulkan REQUIRED)
 #find_package(include/simdjson-3.10.1)
 #find_package(include/fastgltf-0.8.0)
 #add_subdirectory(include/EASTL-3.21.23)
+find_package(fmt CONFIG REQUIRED)
+find_package(KTX REQUIRED)
 add_subdirectory(include/simdjson-3.10.1)
 add_subdirectory(include/fastgltf-0.8.0)
 add_subdirectory(include/vk-bootstrap-main)
@@ -52,6 +54,8 @@ target_link_libraries(${PROJECT_NAME}
         Vulkan::Vulkan
         fastgltf::fastgltf
         simdjson::simdjson
+        fmt::fmt
+        KTX::ktx
         #EASTL
         #EABase
 )

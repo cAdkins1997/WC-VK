@@ -95,10 +95,31 @@ struct Mesh {
     MeshBuffer mesh;
 };
 
-struct Material {
-    std::string name{};
+/*struct Material {
     glm::vec4 baseColorFactors{};
     glm::vec4 mrFactors{};
+    glm::vec4 padding[14];
+};*/
+
+struct Material {
+    glm::vec4 baseColorFactors{};
+    glm::vec4 mrFactors{};
+    Image colorImage;
+    vk::Sampler colorSampler;
+    Image mrImage;
+    vk::Sampler mrSampler;
+    vk::Buffer dataBuffer;
+    uint32_t offset;
+    glm::vec4 padding[5];
+};
+
+struct MaterialResources {
+    Image colorImage;
+    vk::Sampler colorSampler;
+    Image mrImage;
+    vk::Sampler mrSampler;
+    vk::Buffer dataBuffer;
+    uint32_t offset;
 };
 
 struct PushConstants {
@@ -116,13 +137,27 @@ struct Pipeline {
     vk::DescriptorSetLayout descriptorLayout;
 };
 
+enum QueueType {
+    Graphics,
+    Compute,
+    Transfer
+};
+
 struct GLTFData {
-    Pipeline pipeline;
     std::vector<std::shared_ptr<Material>> materials;
+    std::vector<std::shared_ptr<Pipeline>> materialPipelines;
     std::vector<std::shared_ptr<Mesh>> meshes;
 };
 
+struct vkctx {
+    vk::PhysicalDevice physicalDevice;
+    vk::Device device;
+    vk::Queue queue;
+    vk::CommandPool commandPool;
+};
+
 struct SceneData {
+
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 perspective;
