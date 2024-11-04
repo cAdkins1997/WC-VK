@@ -60,7 +60,7 @@ namespace wcvk::core {
         return newBuffer;
     }
 
-    Image Device::create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped) {
+    Image Device::create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped) const {
         Image newImage{};
         newImage.imageFormat = format;
         newImage.imageExtent = size;
@@ -103,7 +103,7 @@ namespace wcvk::core {
         return newImage;
     }
 
-    vk::Sampler Device::create_sampler(vk::Filter minFilter, vk::Filter magFilter) {
+    vk::Sampler Device::create_sampler(vk::Filter minFilter, vk::Filter magFilter) const {
         vk::SamplerCreateInfo samplerCI;
         samplerCI.minFilter = minFilter;
         samplerCI.magFilter = magFilter;
@@ -115,7 +115,7 @@ namespace wcvk::core {
         return newSampler;
     }
 
-    Shader Device::create_shader(std::string_view filePath) const {
+    Shader Device::create_shader(const std::string_view filePath) const {
         std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
 
         if (file.is_open() == false) {
@@ -270,23 +270,6 @@ namespace wcvk::core {
 
     VkImage& Device::get_swapchain_image() {
         return swapchainImages[get_swapchain_image_index()];
-    }
-
-    vkctx Device::build_vcktx(QueueType queueType, vk::CommandPool commandPool) const {
-        vk::Queue queueToUse{};
-        switch (queueType) {
-            case Graphics:
-                queueToUse = graphicsQueue;
-                break;
-            case Compute:
-                queueToUse = computeQueue;
-                break;
-            case Transfer:
-                queueToUse = transferQueue;
-                break;
-        }
-
-        return {physicalDevice, device, queueToUse, commandPool};
     }
 
     Device::Device() {

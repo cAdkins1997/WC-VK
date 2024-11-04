@@ -34,18 +34,16 @@ namespace wcvk::meshes {
     std::optional<std::vector<std::shared_ptr<Mesh>>> loadGltfMeshes(const std::filesystem::path& filePath, commands::UploadContext& context);
     std::optional<std::shared_ptr<Mesh>> load_mesh(const std::filesystem::path& filePath, commands::UploadContext& context);
 
-    std::optional<GLTFData> load_gltf(core::Device& device, const std::filesystem::path& filePath, commands::UploadContext& context, vkctx ctx);
+    std::optional<SceneDescriptionData> load_scene_description(core::Device& device, const std::filesystem::path& filePath, commands::UploadContext& context, Buffer& materialUniform);
+    std::optional<fastgltf::Asset> load_gltf(const std::filesystem::path& filePath);
 
-    void load_gltf(const std::filesystem::path& filePath);
-
-    std::optional<ktxVulkanTexture> load_ktx(const char* path, const vkctx& ctx);
-    std::optional<ktxVulkanTexture> load_ktx(void*, const vkctx& ctx, size_t size);
-
-    std::optional<Image> load_image(core::Device& device, commands::UploadContext& context, const vkctx& ctx, fastgltf::Asset& asset, fastgltf::Image& image);
+    std::optional<Image> load_image(const core::Device& device, commands::UploadContext& context, fastgltf::Asset& asset, fastgltf::Image& image);
+    std::optional<ktxVulkanTexture> load_ktx(const char* path);
+    std::optional<ktxVulkanTexture> load_ktx(void*, size_t size);
 
     void process_mesh_data(fastgltf::Asset& gltf, Mesh& mesh, const fastgltf::Mesh& fastgltfMesh, std::vector<uint32_t>& indices, std::vector<Vertex>& vertices);
-    std::shared_ptr<Material> process_material(core::Device& device, commands::UploadContext& context, vkctx ctx, fastgltf::Asset& gltf, fastgltf::Material& material);
 
+    std::shared_ptr<Material> process_material(core::Device& device, commands::UploadContext& context, fastgltf::Asset& gltf, fastgltf::Material& material);
     vk::Filter extract_gltf_filter(fastgltf::Filter filter);
     vk::SamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter);
 

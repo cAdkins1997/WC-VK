@@ -109,42 +109,80 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
     return meshes;
 }
 
-std::optional<GLTFData> wcvk::meshes::load_gltf(core::Device& device, const std::filesystem::path &filePath, commands::UploadContext& context, vkctx ctx)
+std::optional<SceneDescriptionData> wcvk::meshes::load_scene_description(
+    core::Device &device,
+    const std::filesystem::path &filePath,
+    commands::UploadContext &context,
+    Buffer& materialUniform)
+{
+    if (auto gltf = load_gltf(filePath); gltf.has_value()) {
+        SceneDescriptionData sceneDescData;
+        std::vector<uint32_t> indices;
+        std::vector<Vertex> vertices;
+        for (auto& mesh : gltf->meshes) {
+            Mesh newMesh;
+            newMesh.name = mesh.name;
+            process_mesh_data(gltf.value(), newMesh, mesh, indices, vertices);
+
+            newMesh.mesh = context.upload_mesh(vertices, indices);
+
+            sceneDescData.meshes.emplace_back(std::make_shared<Mesh>(std::move(newMesh)));
+        }
+
+        for (auto&& material : gltf.value().materials) {
+            auto newMaterial = process_material(device, context, gltf.value(), material);
+            sceneDescData.materials.emplace_back(std::move(newMaterial));
+        }
+
+        return sceneDescData;
+    }
+
+    return {};
+}
+
+std::optional<fastgltf::Asset> wcvk::meshes::load_gltf(const std::filesystem::path &filePath)
 {
     fastgltf::Parser parser;
+    fastgltf::Asset gltf;
+
+    constexpr auto fastGLTFOptions = fastgltf::Options::DontRequireValidAssetMember |
+        fastgltf::Options::AllowDouble |
+                fastgltf::Options::LoadExternalBuffers;
 
     auto data = fastgltf::GltfDataBuffer::FromPath(filePath);
     if (data.error() != fastgltf::Error::None) {
         throw std::runtime_error("Failed to read glTF file");
     }
-    auto asset = parser.loadGltf(data.get(), filePath.parent_path());
-    if (auto error = asset.error(); error != fastgltf::Error::None) {
-        throw std::runtime_error("failed to read GLTF buffer");
+
+    fastgltf::GltfDataBuffer& dataBuffer = data.get();
+
+    if (auto type = fastgltf::determineGltfFileType(dataBuffer); type == fastgltf::GltfType::glTF) {
+        auto load = parser.loadGltf(dataBuffer, filePath.parent_path(), fastGLTFOptions);
+        if (load) {
+            gltf = std::move(load.get());
+        } else {
+            std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
+            return {};
+        }
+    }
+    else if (type == fastgltf::GltfType::GLB) {
+        auto load = parser.loadGltfBinary(dataBuffer, filePath.parent_path(), fastGLTFOptions);
+        if (load) {
+            gltf = std::move(load.get());
+        } else {
+            std::cerr << "Failed to load glTF: " << fastgltf::to_underlying(load.error()) << std::endl;
+            return {};
+        }
+    }
+    else {
+        std::cerr << "Failed to determine glTF container" << std::endl;
+        return {};
     }
 
-    GLTFData gltfData;
-    std::vector<uint32_t> indices;
-    std::vector<Vertex> vertices;
-    fastgltf::Asset& gltf = asset.get();
-    for (auto& mesh : asset->meshes) {
-        Mesh newMesh;
-        newMesh.name = mesh.name;
-        process_mesh_data(gltf, newMesh, mesh, indices, vertices);
-
-        newMesh.mesh = context.upload_mesh(vertices, indices);
-
-        gltfData.meshes.emplace_back(std::make_shared<Mesh>(std::move(newMesh)));
-    }
-
-    for (auto&& material : gltf.materials) {
-        auto newMaterial = process_material(device, context, ctx, gltf, material);
-        gltfData.materials.emplace_back(std::move(newMaterial));
-    }
-
-    return gltfData;
+    return gltf;
 }
 
-std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, commands::UploadContext& context, vkctx ctx, fastgltf::Asset& gltf, fastgltf::Material& material) {
+std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, commands::UploadContext& context, fastgltf::Asset& gltf, fastgltf::Material& material) {
     auto newMaterial = std::make_shared<Material>();
 
     if (material.pbrData.metallicRoughnessTexture.has_value()) {
@@ -153,7 +191,7 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
         if (metallicRoughnessTexture.imageIndex.has_value() && metallicRoughnessTexture.samplerIndex.has_value()) {
             auto metalRoughnessTextureImage = gltf.images[metallicRoughnessTexture.imageIndex.value()];
 
-            if (auto result = load_image(device, context, ctx, gltf, metalRoughnessTextureImage); result.has_value()) {
+            if (auto result = load_image(device, context, gltf, metalRoughnessTextureImage); result.has_value()) {
                 newMaterial->mrImage = result.value();
 
                 if (metallicRoughnessTexture.samplerIndex.has_value()) {
@@ -169,17 +207,13 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
         }
     }
 
-    else {
-        newMaterial->mrFactors = {material.pbrData.metallicFactor, material.pbrData.roughnessFactor, 0.0f, 0.0f};
-    }
-
     if (material.pbrData.baseColorTexture.has_value()) {
         auto baseColorTexture = gltf.textures[material.pbrData.baseColorTexture.value().textureIndex];
 
         if (baseColorTexture.imageIndex.has_value() && baseColorTexture.samplerIndex.has_value()) {
             auto baseColorTextureImage = gltf.images[baseColorTexture.imageIndex.value()];
 
-            if (auto result = load_image(device, context, ctx, gltf, baseColorTextureImage); result.has_value()) {
+            if (auto result = load_image(device, context, gltf, baseColorTextureImage); result.has_value()) {
                 newMaterial->colorImage = result.value();
 
                 if (baseColorTexture.samplerIndex.has_value()) {
@@ -194,14 +228,10 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
         }
     }
 
-    else {
-        newMaterial->mrFactors = {
-            material.pbrData.baseColorFactor[0],
-            material.pbrData.baseColorFactor[1],
-            material.pbrData.baseColorFactor[2],
-            material.pbrData.baseColorFactor[3]
-        };
-    }
+    newMaterial->dataBuffer = device.create_buffer(sizeof(Material::MatConstants) * gltf.materials.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    auto* sceneDataUniformBuffer = static_cast<Material::MatConstants *>(newMaterial->dataBuffer.get_mapped_data());
+    sceneDataUniformBuffer->mrFactors = glm::vec4{1,1,1,1};
+    sceneDataUniformBuffer->baseColorFactors = glm::vec4{1,0.5,0,0};
 
     return newMaterial;
 }
@@ -234,12 +264,12 @@ vk::SamplerMipmapMode wcvk::meshes::extract_mipmap_mode(fastgltf::Filter filter)
     }
 }
 
-std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(const char* path, const vkctx &ctx) {
+std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(const char* path) {
     ktxTexture* kTexture;
     ktxVulkanDeviceInfo vdi;
     ktxVulkanTexture texture;
 
-    ktxVulkanDeviceInfo_Construct(&vdi, ctx.physicalDevice, ctx.device, ctx.queue, ctx.commandPool, nullptr);
+    //ktxVulkanDeviceInfo_Construct(&vdi, ctx.physicalDevice, ctx.device, ctx.queue, ctx.commandPool, nullptr);
 
     ktx_check(ktxTexture_CreateFromNamedFile(path, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture));
     ktx_check(ktxTexture_VkUploadEx(kTexture, &vdi, &texture, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
@@ -250,12 +280,12 @@ std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(const char* path, const v
     return texture;
 }
 
-std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(void* data, const vkctx &ctx, size_t size) {
+std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(void* data, size_t size) {
     ktxTexture* kTexture;
     ktxVulkanDeviceInfo vdi;
     ktxVulkanTexture texture;
 
-    ktxVulkanDeviceInfo_Construct(&vdi, ctx.physicalDevice, ctx.device, ctx.queue, ctx.commandPool, nullptr);
+    //ktxVulkanDeviceInfo_Construct(&vdi, ctx.physicalDevice, ctx.device, ctx.queue, ctx.commandPool, nullptr);
 
     auto ktxData = static_cast<ktx_uint8_t*>(data);
 
@@ -268,7 +298,7 @@ std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(void* data, const vkctx &
     return texture;
 }
 
-std::optional<Image> wcvk::meshes::load_image(core::Device& device, commands::UploadContext& context, const vkctx &ctx, fastgltf::Asset &asset, fastgltf::Image& image) {
+std::optional<Image> wcvk::meshes::load_image(const core::Device& device, commands::UploadContext& context, fastgltf::Asset &asset, fastgltf::Image& image) {
     Image newImage{};
 
     int width, height, nrChannels;

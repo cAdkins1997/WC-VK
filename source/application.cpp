@@ -190,9 +190,9 @@ namespace wcvk {
         uploadContext.begin();
         testMeshes = meshes::loadGltfMeshes(R"(../assets/MetalRoughSpheres.glb)", uploadContext).value();
 
-        GLTFData meshes{};
-        auto ctx = device.build_vcktx(Graphics, device.immediateCommandPool);
-        if (auto data = meshes::load_gltf(device, R"(../assets/DamagedHelmet.glb)", uploadContext, ctx); data.has_value()) {
+        SceneDescriptionData meshes{};
+
+        if (auto data = meshes::load_scene_description(device, R"(../assets/DamagedHelmet.glb)", uploadContext); data.has_value()) {
             meshes = data.value();
         }
 

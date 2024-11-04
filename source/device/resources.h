@@ -102,13 +102,18 @@ struct Mesh {
 };*/
 
 struct Material {
-    glm::vec4 baseColorFactors{};
-    glm::vec4 mrFactors{};
     Image colorImage;
     Image mrImage;
-    vk::Buffer dataBuffer;
+    Buffer dataBuffer;
     uint32_t offset;
-    glm::vec4 padding[6];
+
+    struct MatConstants {
+        glm::vec4 baseColorFactors{};
+        glm::vec4 mrFactors{};
+        glm::vec4 extra[14];
+    };
+
+    glm::vec3 padding[5];
 };
 
 struct MaterialResources {
@@ -141,17 +146,10 @@ enum QueueType {
     Transfer
 };
 
-struct GLTFData {
+struct SceneDescriptionData {
     std::vector<std::shared_ptr<Material>> materials;
     std::vector<std::shared_ptr<Pipeline>> materialPipelines;
     std::vector<std::shared_ptr<Mesh>> meshes;
-};
-
-struct vkctx {
-    vk::PhysicalDevice physicalDevice;
-    vk::Device device;
-    vk::Queue queue;
-    vk::CommandPool commandPool;
 };
 
 struct SceneData {
