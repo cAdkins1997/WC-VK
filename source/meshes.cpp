@@ -146,35 +146,29 @@ std::optional<GLTFData> wcvk::meshes::load_gltf(core::Device& device, const std:
 
 std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, commands::UploadContext& context, vkctx ctx, fastgltf::Asset& gltf, fastgltf::Material& material) {
     auto newMaterial = std::make_shared<Material>();
+
     if (material.pbrData.metallicRoughnessTexture.has_value()) {
         auto metallicRoughnessTexture = gltf.textures[material.pbrData.metallicRoughnessTexture.value().textureIndex];
 
         if (metallicRoughnessTexture.imageIndex.has_value() && metallicRoughnessTexture.samplerIndex.has_value()) {
             auto metalRoughnessTextureImage = gltf.images[metallicRoughnessTexture.imageIndex.value()];
-            auto result = load_image(device, context, ctx, gltf, metalRoughnessTextureImage);
 
-            if (metallicRoughnessTexture.samplerIndex.has_value()) {
-                vk::Filter magFilter;
-                vk::Filter minFilter;
-                auto metallicRoughnessSampler = gltf.samplers[metallicRoughnessTexture.samplerIndex.value()];;
-                if (metallicRoughnessSampler.magFilter.has_value()) {
-                    magFilter = static_cast<vk::Filter>(metallicRoughnessSampler.magFilter.value());
-                }
+            if (auto result = load_image(device, context, ctx, gltf, metalRoughnessTextureImage); result.has_value()) {
+                newMaterial->mrImage = result.value();
 
-                if (metallicRoughnessSampler.magFilter.has_value()) {
-                    minFilter = static_cast<vk::Filter>(metallicRoughnessSampler.minFilter.value());
-                }
+                if (metallicRoughnessTexture.samplerIndex.has_value()) {
+                    auto metallicRoughnessSampler = gltf.samplers[metallicRoughnessTexture.samplerIndex.value()];
 
-                if (result.has_value()) {
-                    newMaterial->mrImage = result.value();
-                    newMaterial->mrImage.sampler = device.create_sampler(
-                    minFilter,
-                    magFilter
-                    );
+
+                    auto magFilter = extract_gltf_filter(metallicRoughnessSampler.magFilter.value_or(vk::Filter::eNearest));
+                    auto minFilter = extract_gltf_filter(metallicRoughnessSampler.minFilter.value_or(vk::Filter::eNearest));
+
+                    newMaterial->mrImage.sampler = device.create_sampler(minFilter, magFilter);
                 }
             }
         }
     }
+
     else {
         newMaterial->mrFactors = {material.pbrData.metallicFactor, material.pbrData.roughnessFactor, 0.0f, 0.0f};
     }
@@ -184,26 +178,17 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
 
         if (baseColorTexture.imageIndex.has_value() && baseColorTexture.samplerIndex.has_value()) {
             auto baseColorTextureImage = gltf.images[baseColorTexture.imageIndex.value()];
-            auto result = load_image(device, context, ctx, gltf, baseColorTextureImage);
-            if (baseColorTexture.samplerIndex.has_value()) {
-                vk::Filter magFilter;
-                vk::Filter minFilter;
-                auto baseColorSampler = gltf.samplers[baseColorTexture.samplerIndex.value()];
 
-                if (baseColorSampler.magFilter.has_value()) {
-                    magFilter = static_cast<vk::Filter>(baseColorSampler.magFilter.value());
-                }
+            if (auto result = load_image(device, context, ctx, gltf, baseColorTextureImage); result.has_value()) {
+                newMaterial->colorImage = result.value();
 
-                if (baseColorSampler.magFilter.has_value()) {
-                    minFilter = static_cast<vk::Filter>(baseColorSampler.minFilter.value());
-                }
+                if (baseColorTexture.samplerIndex.has_value()) {
+                    auto baseColorSampler = gltf.samplers[baseColorTexture.samplerIndex.value()];
 
-                if (result.has_value()) {
-                    newMaterial->colorImage = result.value();
-                    newMaterial->colorSampler = device.create_sampler(
-                    minFilter,
-                    magFilter
-                    );
+                    auto magFilter = extract_gltf_filter(baseColorSampler.magFilter.value_or(vk::Filter::eNearest));
+                    auto minFilter = extract_gltf_filter(baseColorSampler.minFilter.value_or(vk::Filter::eNearest));
+
+                    newMaterial->colorImage.sampler = device.create_sampler(minFilter, magFilter);
                 }
             }
         }
@@ -219,6 +204,34 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
     }
 
     return newMaterial;
+}
+
+vk::Filter wcvk::meshes::extract_gltf_filter(const fastgltf::Filter filter) {
+    switch (filter) {
+        case fastgltf::Filter::Nearest:
+        case fastgltf::Filter::NearestMipMapNearest:
+        case fastgltf::Filter::NearestMipMapLinear:
+            return vk::Filter::eNearest;
+
+        case fastgltf::Filter::Linear:
+        case fastgltf::Filter::LinearMipMapNearest:
+        case fastgltf::Filter::LinearMipMapLinear:
+        default:
+            return vk::Filter::eLinear;
+    }
+}
+
+vk::SamplerMipmapMode wcvk::meshes::extract_mipmap_mode(fastgltf::Filter filter) {
+    switch (filter) {
+        case fastgltf::Filter::NearestMipMapNearest:
+            case fastgltf::Filter::LinearMipMapNearest:
+            return vk::SamplerMipmapMode::eNearest;
+
+        case fastgltf::Filter::NearestMipMapLinear:
+        case fastgltf::Filter::LinearMipMapLinear:
+        default:
+            return vk::SamplerMipmapMode::eLinear;
+    }
 }
 
 std::optional<ktxVulkanTexture> wcvk::meshes::load_ktx(const char* path, const vkctx &ctx) {
@@ -274,7 +287,7 @@ std::optional<Image> wcvk::meshes::load_image(core::Device& device, commands::Up
                     imageSize.height = height;
                     imageSize.depth = 1;
 
-                    newImage = device.create_image(imageSize, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, true);
+                    newImage = device.create_image(imageSize, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, false);
                     context.upload_image(data, newImage);
 
                     stbi_image_free(data);
@@ -301,7 +314,7 @@ std::optional<Image> wcvk::meshes::load_image(core::Device& device, commands::Up
                     imageSize.height = height;
                     imageSize.depth = 1;
 
-                    newImage = device.create_image(imageSize, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, true);
+                    newImage = device.create_image(imageSize, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, false);
                     context.upload_image(data, newImage);
 
                     stbi_image_free(data);
@@ -330,7 +343,7 @@ std::optional<Image> wcvk::meshes::load_image(core::Device& device, commands::Up
                                        imageSize.height = height;
                                        imageSize.depth = 1;
 
-                                       newImage = device.create_image(imageSize, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, true);
+                                       newImage = device.create_image(imageSize, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc, true);
                                        context.upload_image(data, newImage);
 
                                        stbi_image_free(data);

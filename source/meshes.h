@@ -46,6 +46,9 @@ namespace wcvk::meshes {
     void process_mesh_data(fastgltf::Asset& gltf, Mesh& mesh, const fastgltf::Mesh& fastgltfMesh, std::vector<uint32_t>& indices, std::vector<Vertex>& vertices);
     std::shared_ptr<Material> process_material(core::Device& device, commands::UploadContext& context, vkctx ctx, fastgltf::Asset& gltf, fastgltf::Material& material);
 
+    vk::Filter extract_gltf_filter(fastgltf::Filter filter);
+    vk::SamplerMipmapMode extract_mipmap_mode(fastgltf::Filter filter);
+
 #define ktx_check(x)                    \
     do {                                \
         KTX_error_code error = x;      \

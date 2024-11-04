@@ -105,12 +105,10 @@ struct Material {
     glm::vec4 baseColorFactors{};
     glm::vec4 mrFactors{};
     Image colorImage;
-    vk::Sampler colorSampler;
     Image mrImage;
-    vk::Sampler mrSampler;
     vk::Buffer dataBuffer;
     uint32_t offset;
-    glm::vec4 padding[5];
+    glm::vec4 padding[6];
 };
 
 struct MaterialResources {

@@ -65,7 +65,11 @@ namespace wcvk::core {
         newImage.imageFormat = format;
         newImage.imageExtent = size;
 
-        VkImageCreateInfo imageCI = vkinit::image_create_info(static_cast<VkFormat>(format) ,static_cast<VkImageUsageFlags>(usage), VkExtent3D(size));
+        VkImageCreateInfo imageCI = vkinit::image_create_info(
+            static_cast<VkFormat>(format),
+            static_cast<VkImageUsageFlags>(usage),
+            VkExtent3D(size));\
+
         if (mipmapped) {
             imageCI.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(size.width, size.height)))) + 1;
         }
@@ -89,11 +93,12 @@ namespace wcvk::core {
 
         vk::ImageViewCreateInfo viewInfo({}, newImage.image, vk::ImageViewType::e2D, format, components, aspectFlag);
         viewInfo.subresourceRange.levelCount = imageCI.mipLevels;
+        viewInfo.subresourceRange.layerCount = vk::RemainingArrayLayers;
 
         newImage.imageView = device.createImageView(viewInfo, nullptr);
 
-        vk::SamplerCreateInfo samplerCI({}, vk::Filter::eNearest);
-        newImage.sampler = device.createSampler(samplerCI, nullptr);
+        /*vk::SamplerCreateInfo samplerCI({}, vk::Filter::eNearest);
+        newImage.sampler = device.createSampler(samplerCI, nullptr);*/
 
         return newImage;
     }
