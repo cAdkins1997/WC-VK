@@ -1,7 +1,5 @@
 #include "camera.h"
 
-#include <glm/ext/matrix_transform.hpp>
-
 namespace wcvk {
     Camera::Camera(glm::vec3 position, glm::vec3 up, float _yaw, float _pitch)
     : Front(glm::vec3(0.0f, 0.0f, -1.0f)), movementSpeed(SPEED), mouseSensitivity(SENSITIVITY), zoom(ZOOM)

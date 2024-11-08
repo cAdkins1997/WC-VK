@@ -103,10 +103,11 @@ namespace wcvk::core {
         return newImage;
     }
 
-    vk::Sampler Device::create_sampler(vk::Filter minFilter, vk::Filter magFilter) const {
+    vk::Sampler Device::create_sampler(vk::Filter minFilter, vk::Filter magFilter, vk::SamplerMipmapMode mipmapMode) const {
         vk::SamplerCreateInfo samplerCI;
         samplerCI.minFilter = minFilter;
         samplerCI.magFilter = magFilter;
+        samplerCI.mipmapMode = mipmapMode;
         vk::Sampler newSampler;
         vk_check(
             device.createSampler(&samplerCI, nullptr, &newSampler),
@@ -480,8 +481,8 @@ namespace wcvk::core {
 
         vkCreateImageView(device, &viewInfo, nullptr, reinterpret_cast<VkImageView*>(&drawImage.imageView));
 
-        drawImageSamplerLinear = create_sampler(vk::Filter::eLinear, vk::Filter::eLinear);
-        drawImageSamplerNearest = create_sampler(vk::Filter::eNearest, vk::Filter::eNearest);
+        drawImageSamplerLinear = create_sampler(vk::Filter::eLinear, vk::Filter::eLinear, vk::SamplerMipmapMode::eLinear);
+        drawImageSamplerNearest = create_sampler(vk::Filter::eNearest, vk::Filter::eNearest,  vk::SamplerMipmapMode::eLinear);
 
         primaryDeletionQueue.push_function([this]() {
             device.destroySampler(drawImageSamplerNearest, nullptr);

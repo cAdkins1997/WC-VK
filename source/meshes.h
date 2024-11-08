@@ -1,4 +1,4 @@
-
+/*
 #pragma once
 #include <memory>
 #include <filesystem>
@@ -22,19 +22,54 @@
 
 namespace wcvk::meshes {
 
-    struct MeshData {
-        uint32_t meshIndex;
-        uint32_t meshPrimitiveIndex;
-        uint32_t baseVertexOffset;
-        uint32_t baseIndexOffset;
-        uint32_t NumVertices;
-        uint32_t NumIndices;
+    struct Node {
+        std::weak_ptr<Node> parent;
+        std::vector<std::shared_ptr<Node>> children;
+
+        glm::mat4 localTransform;
+        glm::mat4 worldTransform;
+
+        void refreshTransform(const glm::mat4& parentMatrix);
+    };
+
+    struct MeshNode : Node {
+        std::shared_ptr<Mesh> mesh;
+    };
+
+    struct RenderObject {
+        uint32_t indexCount;
+        uint32_t firstIndex;
+        VkBuffer indexBuffer;
+
+        Material* material;
+
+        glm::mat4 transform;
+        VkDeviceAddress vertexBufferAddress;
+    };
+
+    struct DrawContext {
+        std::vector<RenderObject> opaqueSurfaces;
+        std::vector<RenderObject> transparentSurfaces;
+    };
+
+    struct GLTF {
+        std::unordered_map<std::string, std::shared_ptr<Mesh>> meshes;
+        std::unordered_map<std::string, std::shared_ptr<Image>> images;
+        std::unordered_map<std::string, std::shared_ptr<Material>> materials;
+
+        std::vector<std::shared_ptr<Node>> topNodes;
+        std::unordered_map<std::string, std::shared_ptr<Node>> nodes;
+
+        std::vector<vk::Sampler> samplers;
+
+        DescriptorAllocator descriptorAllocator;
+        Buffer materialBuffer;
     };
 
     std::optional<std::vector<std::shared_ptr<Mesh>>> loadGltfMeshes(const std::filesystem::path& filePath, commands::UploadContext& context);
     std::optional<std::shared_ptr<Mesh>> load_mesh(const std::filesystem::path& filePath, commands::UploadContext& context);
 
-    std::optional<SceneDescriptionData> load_scene_description(core::Device& device, const std::filesystem::path& filePath, commands::UploadContext& context, Buffer& materialUniform);
+    std::optional<GLTF> load_scene_description(core::Device& device, const std::filesystem::path& filePath, commands::UploadContext& context);
     std::optional<fastgltf::Asset> load_gltf(const std::filesystem::path& filePath);
 
     std::optional<Image> load_image(const core::Device& device, commands::UploadContext& context, fastgltf::Asset& asset, fastgltf::Image& image);
@@ -55,3 +90,4 @@ namespace wcvk::meshes {
         }                               \
     } while(0)
 }
+*/

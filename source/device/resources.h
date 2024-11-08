@@ -1,16 +1,9 @@
 
 #pragma once
-
-#include "../glmdefines.h"
-
-#include <vector>
-#include <string>
+#include "../pipelines/descriptors.h"
+#include "../frustum.h"
 #include <functional>
 #include <memory>
-
-#include "../frustum.h"
-#include "../vkcommon.h"
-#include "../pipelines/descriptors.h"
 
 enum class DeviceAddress : uint64_t { Invalid = 0 };
 
@@ -78,42 +71,46 @@ struct Vertex {
     glm::vec4 color;
 };
 
-struct Surface {
-    uint32_t startIndex{};
-    uint32_t count{};
-};
-
 struct MeshBuffer {
     Buffer indexBuffer;
     Buffer vertexBuffer;
     vk::DeviceAddress deviceAddress;
 };
 
-struct Mesh {
-    std::string name{};
-    std::vector<Surface> surfaces;
-    MeshBuffer mesh;
+enum class MaterialPass :uint8_t { MainColor, Transparent, Other };
+
+struct Pipeline {
+    vk::Pipeline pipeline;
+    vk::PipelineLayout pipelineLayout;
+    vk::DescriptorSet set;
+    vk::DescriptorSetLayout descriptorLayout;
 };
 
-/*struct Material {
-    glm::vec4 baseColorFactors{};
-    glm::vec4 mrFactors{};
-    glm::vec4 padding[14];
-};*/
+struct MaterialPipeline {
+    vk::Pipeline pipeline;
+    vk::PipelineLayout layout;
+};
 
-struct Material {
-    Image colorImage;
-    Image mrImage;
-    Buffer dataBuffer;
-    uint32_t offset;
+struct MaterialInstance {
+    MaterialPipeline* pipeline;
+    vk::DescriptorSet materialSet;
+    MaterialPass passType;
+};
 
-    struct MatConstants {
-        glm::vec4 baseColorFactors{};
-        glm::vec4 mrFactors{};
-        glm::vec4 extra[14];
-    };
+struct GLTFMaterial {
+    MaterialInstance data;
+};
 
-    glm::vec3 padding[5];
+struct Surface {
+    uint32_t startIndex{};
+    uint32_t count{};
+    std::shared_ptr<GLTFMaterial> material;
+};
+
+struct Mesh {
+    std::vector<Surface> surfaces;
+    MeshBuffer mesh;
+    std::string name;
 };
 
 struct MaterialResources {
@@ -133,24 +130,7 @@ struct Shader {
     vk::ShaderModule module;
 };
 
-struct Pipeline {
-    vk::Pipeline pipeline;
-    vk::PipelineLayout pipelineLayout;
-    vk::DescriptorSet set;
-    vk::DescriptorSetLayout descriptorLayout;
-};
-
-enum QueueType {
-    Graphics,
-    Compute,
-    Transfer
-};
-
-struct SceneDescriptionData {
-    std::vector<std::shared_ptr<Material>> materials;
-    std::vector<std::shared_ptr<Pipeline>> materialPipelines;
-    std::vector<std::shared_ptr<Mesh>> meshes;
-};
+enum QueueType { Graphics, Compute, Transfer };
 
 struct SceneData {
 

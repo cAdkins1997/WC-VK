@@ -1,14 +1,6 @@
 
-#ifndef APPLICATION_H
-#define APPLICATION_H
-#include "glmdefines.h"
-
-#include "device/device.hpp"
-#include "context.h"
-
-#include "pipelines/descriptors.h"
-
-#include "frustum.h"
+#pragma once
+#include "scenedesc.h"
 
 namespace wcvk {
     class Application {
@@ -21,6 +13,7 @@ namespace wcvk {
 
     private:
         void init_descriptors();
+        void init_pipeline();
 
         DescriptorAllocator descriptorAllocator;
         Pipeline drawImagePipeline;
@@ -36,7 +29,16 @@ namespace wcvk {
         vk::RenderingAttachmentInfo drawAttachment;
         vk::RenderingAttachmentInfo depthAttachment;
 
+    private:
         Buffer sceneDataBuffer;
+
+        vk::DescriptorSetLayout gpuSceneDataDescriptorLayout;
+        MaterialInstance defaultData;
+        GLTF::Material metalRoughMaterial;
+
+        std::shared_ptr<GLTF::LoadedGLTF> sceneDesc;
+        GLTF::DrawContext mainDrawContext;
+        std::unordered_map<std::string, std::shared_ptr<GLTF::Node>> loadedNodes;
 
     private:
         core::Device device;
@@ -44,5 +46,3 @@ namespace wcvk {
         std::vector<std::shared_ptr<Mesh>> testMeshes;
     };
 }
-
-#endif //APPLICATION_H

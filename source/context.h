@@ -1,10 +1,6 @@
 
 #pragma once
-#include "glmdefines.h"
-#include "vkinit.h"
-#include <iostream>
-
-#include "device/device.hpp"
+#include "pipelines/graphicspipelines.h"
 
 namespace wcvk::core {
     class Device;
@@ -84,7 +80,7 @@ namespace wcvk::commands {
         void copy_buffer(vk::Buffer bufferSrc, vk::Buffer bufferDst, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset, vk::DeviceSize dataSize);
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
 
-        MeshBuffer upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices);
+        MeshBuffer upload_mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
         void upload_texture();
         void upload_image(void* data, Image& image);

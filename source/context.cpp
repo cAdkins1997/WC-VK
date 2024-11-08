@@ -373,7 +373,7 @@ vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk
         _commandBuffer.blitImage2(&blitInfo);
     }
 
-    MeshBuffer UploadContext::upload_mesh(std::span<Vertex> vertices, std::span<uint32_t> indices) {
+    MeshBuffer UploadContext::upload_mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
         const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
         const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
@@ -386,7 +386,7 @@ vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk
         void* data = stagingBuffer.info.pMappedData;
         vmaMapMemory(_allocator, stagingBuffer.allocation, &data);
         memcpy(data, vertices.data(), vertexBufferSize);
-        memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
+        memcpy(static_cast<char*>(data) + vertexBufferSize, indices.data(), indexBufferSize);
         vmaUnmapMemory(_allocator, stagingBuffer.allocation);
 
         vk::BufferDeviceAddressInfo deviceAddressInfo;

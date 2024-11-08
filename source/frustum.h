@@ -1,7 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <array>
-
 #include "glmdefines.h"
 
 

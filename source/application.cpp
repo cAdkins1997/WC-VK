@@ -1,9 +1,5 @@
 
 #include "application.h"
-#include <chrono>
-
-#include "meshes.h"
-#include "pipelines/graphicspipelines.h"
 
 namespace wcvk {
     Application::Application() {
@@ -188,12 +184,9 @@ namespace wcvk {
         vk_check(device.get_handle().resetFences(1, &device.immediateFence), "Failed to reset fences");
         commands::UploadContext uploadContext(device.get_handle(), device.immediateCommandBuffer, device.allocator);
         uploadContext.begin();
-        testMeshes = meshes::loadGltfMeshes(R"(../assets/MetalRoughSpheres.glb)", uploadContext).value();
 
-        SceneDescriptionData meshes{};
-
-        if (auto data = meshes::load_scene_description(device, R"(../assets/DamagedHelmet.glb)", uploadContext); data.has_value()) {
-            meshes = data.value();
+        if (auto ret = load_GLTF(device, uploadContext, R"(../assets/MetalRoughSpheres.glb)", metalRoughMaterial); ret.has_value()) {
+            sceneDesc = ret.value();
         }
 
         uploadContext.end();
@@ -253,5 +246,25 @@ namespace wcvk {
             vmaDestroyBuffer(device.allocator, meshBuffer.vertexBuffer.buffer, meshBuffer.vertexBuffer.allocation);
             vmaDestroyBuffer(device.allocator, meshBuffer.indexBuffer.buffer, meshBuffer.indexBuffer.allocation);
         });*/
+    }
+
+    void Application::init_pipeline() {
+        metalRoughMaterial.build_pipelines(&device, gpuSceneDataDescriptorLayout);
+
+        GLTF::Material::MaterialResources materialResources;
+
+        Buffer materialConstants = device.create_buffer(
+            sizeof(GLTF::Material::MaterialResources),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        auto sceneUniformData = static_cast<GLTF::Material::MatConstants *>(materialConstants.get_mapped_data());
+        sceneUniformData->baseColorFactors = glm::vec4{1,1,1,1};
+        sceneUniformData->mrFactors = glm::vec4{1,0.5,0,0};
+
+        materialResources.dataBuffer = materialConstants.buffer;
+        materialResources.dataBufferOffset = 0;
+
+        defaultData = metalRoughMaterial.write_material(device.get_handle() ,MaterialPass::MainColor,materialResources, descriptorAllocator);
     }
 }

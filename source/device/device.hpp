@@ -1,23 +1,13 @@
 
 #pragma once
-
-#include "../glmdefines.h"
-
-#include "resources.h"
-#include "../context.h"
-#include "../vkcommon.h"
+#include "../device/resources.h"
 #include "../camera.h"
+#include "../vkinit.h"
+#include "../context.h"
 
-#include <fstream>
 #include <VkBootstrap.h>
-#include <VkBootstrapDispatch.h>
-#include <vector>
-#include <string>
-#include <optional>
-#include <memory>
-#include <span>
-#include <functional>
 #include <filesystem>
+#include <fstream>
 
 namespace wcvk::commands {
     struct GraphicsContext;
@@ -50,7 +40,7 @@ namespace wcvk::core {
             VmaMemoryUsage memoryUsage,
             VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT) const;
         [[nodiscard]] Image create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped) const;
-        [[nodiscard]] vk::Sampler create_sampler(vk::Filter minFilter, vk::Filter magFilter) const;
+        [[nodiscard]] vk::Sampler create_sampler(vk::Filter minFilter, vk::Filter magFilter, vk::SamplerMipmapMode mipmapMode) const;
         [[nodiscard]] Shader create_shader(std::string_view filePath) const;
 
         void submit_graphics_work(const commands::GraphicsContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);

@@ -27,6 +27,8 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/frustum.cpp
         source/frustum.h
         source/glmdefines.h
+        source/scenedesc.cpp
+        source/scenedesc.h
 )
 
 if (WIN32)

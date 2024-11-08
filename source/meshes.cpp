@@ -1,8 +1,15 @@
-
+/*
 #include "meshes.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../include/stb_image.h"
+
+void wcvk::meshes::Node::refreshTransform(const glm::mat4 &parentMatrix) {
+    worldTransform = parentMatrix * localTransform;
+    for (const auto& c : children) {
+        c->refreshTransform(worldTransform);
+    }
+}
 
 std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
     const std::filesystem::path &filePath,
@@ -26,7 +33,6 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
     fastgltf::Asset& gltf = asset.get();
     for (auto& mesh : asset->meshes) {
         Mesh newMesh;
-        newMesh.name = mesh.name;
         indices.clear();
         vertices.clear();
         for (auto&& primitive : mesh.primitives) {
@@ -109,32 +115,71 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
     return meshes;
 }
 
-std::optional<SceneDescriptionData> wcvk::meshes::load_scene_description(
+std::optional<wcvk::meshes::GLTF> wcvk::meshes::load_scene_description(
     core::Device &device,
     const std::filesystem::path &filePath,
-    commands::UploadContext &context,
-    Buffer& materialUniform)
+    commands::UploadContext &context)
 {
     if (auto gltf = load_gltf(filePath); gltf.has_value()) {
-        SceneDescriptionData sceneDescData;
+        GLTF gltfSceneDescription;
         std::vector<uint32_t> indices;
         std::vector<Vertex> vertices;
+
+        std::vector<std::shared_ptr<Mesh>> meshes;
+        std::vector<std::shared_ptr<Node>> nodes;
+        std::vector<Image> images;
+        std::vector<std::shared_ptr<Material>> materials;
+
         for (auto& mesh : gltf->meshes) {
             Mesh newMesh;
-            newMesh.name = mesh.name;
             process_mesh_data(gltf.value(), newMesh, mesh, indices, vertices);
 
             newMesh.mesh = context.upload_mesh(vertices, indices);
 
-            sceneDescData.meshes.emplace_back(std::make_shared<Mesh>(std::move(newMesh)));
+            gltfSceneDescription.meshes.emplace(mesh.name, std::make_shared<Mesh>(std::move(newMesh)));
         }
 
         for (auto&& material : gltf.value().materials) {
             auto newMaterial = process_material(device, context, gltf.value(), material);
-            sceneDescData.materials.emplace_back(std::move(newMaterial));
+            gltfSceneDescription.materials.emplace(material.name.c_str(), std::move(newMaterial));
         }
 
-        return sceneDescData;
+        for (fastgltf::Node& node : gltf->nodes) {
+            std::shared_ptr<Node> newNode;
+
+            if (node.meshIndex.has_value()) {
+                newNode = std::make_shared<MeshNode>();
+                static_cast<MeshNode*>(newNode.get())->mesh = meshes[*node.meshIndex];
+            }
+            else {
+                newNode = std::make_shared<Node>();
+            }
+
+            nodes.push_back(newNode);
+            gltfSceneDescription.nodes[node.name.c_str()];
+
+            const auto transformMatrix = fastgltf::getTransformMatrix(node);
+            memcpy(&newNode->localTransform, transformMatrix.data(), sizeof(transformMatrix.data()));
+        }
+
+        for (int i = 0; i < gltf->nodes.size(); i++) {
+            fastgltf::Node& node = gltf->nodes[i];
+            std::shared_ptr<Node>& sceneNode = nodes[i];
+
+            for (auto& c : node.children) {
+                sceneNode->children.push_back(nodes[c]);
+                nodes[c]->parent = sceneNode;
+            }
+        }
+
+        for (auto& node : nodes) {
+            if (node->parent.lock() == nullptr) {
+                gltfSceneDescription.topNodes.push_back(node);
+                node->refreshTransform(glm::mat4 { 1.f });
+            }
+        }
+
+        return gltfSceneDescription;
     }
 
     return {};
@@ -200,8 +245,9 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
 
                     auto magFilter = extract_gltf_filter(metallicRoughnessSampler.magFilter.value_or(vk::Filter::eNearest));
                     auto minFilter = extract_gltf_filter(metallicRoughnessSampler.minFilter.value_or(vk::Filter::eNearest));
+                    auto mipmapMode = extract_mipmap_mode(metallicRoughnessSampler.minFilter.value_or(vk::Filter::eNearest));
 
-                    newMaterial->mrImage.sampler = device.create_sampler(minFilter, magFilter);
+                    newMaterial->mrImage.sampler = device.create_sampler(minFilter, magFilter, mipmapMode);
                 }
             }
         }
@@ -221,17 +267,19 @@ std::shared_ptr<Material> wcvk::meshes::process_material(core::Device& device, c
 
                     auto magFilter = extract_gltf_filter(baseColorSampler.magFilter.value_or(vk::Filter::eNearest));
                     auto minFilter = extract_gltf_filter(baseColorSampler.minFilter.value_or(vk::Filter::eNearest));
+                    auto mipmapMode = extract_mipmap_mode(baseColorSampler.minFilter.value_or(vk::Filter::eNearest));
 
-                    newMaterial->colorImage.sampler = device.create_sampler(minFilter, magFilter);
+                    newMaterial->colorImage.sampler = device.create_sampler(minFilter, magFilter, mipmapMode);
                 }
             }
         }
     }
 
     newMaterial->dataBuffer = device.create_buffer(sizeof(Material::MatConstants) * gltf.materials.size(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    auto* sceneDataUniformBuffer = static_cast<Material::MatConstants *>(newMaterial->dataBuffer.get_mapped_data());
+    auto* sceneDataUniformBuffer = static_cast<Material::MatConstants*>(newMaterial->dataBuffer.get_mapped_data());
     sceneDataUniformBuffer->mrFactors = glm::vec4{1,1,1,1};
     sceneDataUniformBuffer->baseColorFactors = glm::vec4{1,0.5,0,0};
+
 
     return newMaterial;
 }
@@ -328,7 +376,7 @@ std::optional<Image> wcvk::meshes::load_image(const core::Device& device, comman
                     vk::Extent3D extent {texture.width, texture.height, texture.depth};
                     newImage = device.create_image(extent, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, true);
                     newImage.image = result.value().image;
-                }*/
+                }
             },
             [&](fastgltf::sources::Vector& vector) {
                 unsigned char* data  = stbi_load_from_memory(
@@ -354,7 +402,7 @@ std::optional<Image> wcvk::meshes::load_image(const core::Device& device, comman
                     ktxVulkanTexture texture = result.value();
                     vk::Extent3D extent {texture.width, texture.height, texture.depth};
                     newImage = device.create_image(extent, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, true);
-                }*/
+                }
             },
             [&](fastgltf::sources::BufferView& view) {
                 auto& bufferView = asset.bufferViews[view.bufferViewIndex];
@@ -383,7 +431,7 @@ std::optional<Image> wcvk::meshes::load_image(const core::Device& device, comman
                                        ktxVulkanTexture texture = result.value();
                                        vk::Extent3D extent {texture.width, texture.height, texture.depth};
                                        newImage = device.create_image(extent, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, true);
-                                   }*/
+                                   }
                                }
                 }, buffer.data);
             },
@@ -461,3 +509,4 @@ void wcvk::meshes::process_mesh_data(fastgltf::Asset& gltf,  Mesh& mesh, const f
         mesh.surfaces.push_back(newSurface);
     }
 }
+*/
