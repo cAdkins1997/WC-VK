@@ -1,6 +1,10 @@
 
 #include "application.h"
 
+#include "meshes.h"
+#include "scene.h"
+#include "sceneresources.h"
+
 namespace wcvk {
     Application::Application() {
         run();
@@ -16,6 +20,9 @@ namespace wcvk {
     }
 
     void Application::run() {
+        allocators::MemoryService::instance()->init(nullptr);
+        allocators::Allocator* allocator = &allocators::MemoryService::instance()->system_allocator;
+
         drawImage = device.get_draw_image();
         drawHandle = drawImage.get_handle();
         drawImageExtent.height = drawImage.get_height();
@@ -116,7 +123,7 @@ namespace wcvk {
 
         device.wait_on_work();
 
-        VkImage& currentSwapchainImage = device.get_swapchain_image();
+        VkImage currentSwapchainImage = device.get_swapchain_image();
         if (device.resizeRequested) {
             return;
         }
@@ -185,14 +192,20 @@ namespace wcvk {
         commands::UploadContext uploadContext(device.get_handle(), device.immediateCommandBuffer, device.allocator);
         uploadContext.begin();
 
-        if (auto ret = load_GLTF(device, uploadContext, R"(../assets/MetalRoughSpheres.glb)", metalRoughMaterial); ret.has_value()) {
-            sceneDesc = ret.value();
+        if (auto result = meshes::load_gltf_meshes(R"(../assets/MetalRoughSpheres.glb)", uploadContext); result.has_value()) {
+            testMeshes = result.value();
         }
+
+        scene::glTF scene = scene::gltf_load_file("C:/Dev/projects/computergraphics/WCVK/assets/sponza/NewSponza_Main_glTF_003.gltf");
+        SceneDesc description;
+
+        allocators::Allocator* heapAllocator = &allocators::MemoryService::instance()->system_allocator;
+        description.init(scene, device, heapAllocator);
 
         uploadContext.end();
         device.submit_upload_work(uploadContext);
 
-        std::vector<DescriptorAllocator::PoolSizeRatio> sizes {
+        eastl::vector<descriptors::DescriptorAllocator::PoolSizeRatio> sizes {
                 { vk::DescriptorType::eStorageBuffer, 3 },
                 { vk::DescriptorType::eUniformBuffer, 3 },
                 { vk::DescriptorType::eCombinedImageSampler, 4 }
@@ -201,26 +214,26 @@ namespace wcvk {
         descriptorAllocator.init(device.device, 10, sizes);
 
         {
-            DescriptorLayoutBuilder builder;
+            descriptors::DescriptorLayoutBuilder builder;
             builder.add_binding(0, vk::DescriptorType::eStorageImage);
             drawImagePipeline.descriptorLayout = builder.build(device.device, vk::ShaderStageFlagBits::eCompute);
 
             drawImagePipeline.set = descriptorAllocator.allocate(device.device, drawImagePipeline.descriptorLayout);
 
-            DescriptorWriter writer;
+            descriptors::DescriptorWriter writer;
             writer.write_image(0, device.drawImage.imageView, VK_NULL_HANDLE, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
             writer.update_set(device.device, drawImagePipeline.set);
         }
 
         for (uint32_t i = 0; i < core::MAX_FRAMES_IN_FLIGHT; i++) {
-            std::vector<DescriptorAllocator::PoolSizeRatio> frame_sizes {
+            eastl::vector<descriptors::DescriptorAllocator::PoolSizeRatio> frame_sizes {
                         { vk::DescriptorType::eStorageImage, 3 },
                         { vk::DescriptorType::eStorageBuffer, 3 },
                         { vk::DescriptorType::eUniformBuffer, 3 },
                         { vk::DescriptorType::eCombinedImageSampler, 4 },
             };
 
-            device.frames[i].frameDescriptors = DescriptorAllocator{};
+            device.frames[i].frameDescriptors = descriptors::DescriptorAllocator{};
             device.frames[i].frameDescriptors.init(device.device, 1000, frame_sizes);
 
             device.primaryDeletionQueue.push_function([&, i]() {
@@ -229,14 +242,14 @@ namespace wcvk {
         }
 
         {
-            DescriptorLayoutBuilder builder;
+            descriptors::DescriptorLayoutBuilder builder;
             builder.add_binding(0, vk::DescriptorType::eStorageImage);
             builder.add_binding(1, vk::DescriptorType::eUniformBuffer);
             trianglePipeline.descriptorLayout = builder.build(device.get_handle(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
 
             trianglePipeline.set = descriptorAllocator.allocate(device.device, trianglePipeline.descriptorLayout);
 
-            DescriptorWriter writer;
+            descriptors::DescriptorWriter writer;
             writer.write_image(0, device.drawImage.imageView, nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
             writer.write_buffer(1, sceneDataBuffer.buffer, sizeof(SceneData), 0, vk::DescriptorType::eUniformBuffer);
             writer.update_set(device.device, trianglePipeline.set);
@@ -249,7 +262,7 @@ namespace wcvk {
     }
 
     void Application::init_pipeline() {
-        metalRoughMaterial.build_pipelines(&device, gpuSceneDataDescriptorLayout);
+        /*metalRoughMaterial.build_pipelines(&device, gpuSceneDataDescriptorLayout);
 
         GLTF::Material::MaterialResources materialResources;
 
@@ -265,6 +278,6 @@ namespace wcvk {
         materialResources.dataBuffer = materialConstants.buffer;
         materialResources.dataBufferOffset = 0;
 
-        defaultData = metalRoughMaterial.write_material(device.get_handle() ,MaterialPass::MainColor,materialResources, descriptorAllocator);
+        defaultData = metalRoughMaterial.write_material(device.get_handle() ,MaterialPass::MainColor,materialResources, descriptorAllocator);*/
     }
 }

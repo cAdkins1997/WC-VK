@@ -27,8 +27,23 @@ add_executable(${PROJECT_NAME} source/main.cpp
         source/frustum.cpp
         source/frustum.h
         source/glmdefines.h
-        source/scenedesc.cpp
-        source/scenedesc.h
+        source/structures/array.h
+        source/structures/hashmap.h
+        source/scene.cpp
+        source/scene.h
+        source/allocator.cpp
+        source/allocator.h
+        source/service.cpp
+        source/service.h
+        include/tlsf.h
+        include/tlsf.c
+        include/stb_image.h
+        source/memory.cpp
+        source/memory.h
+        source/structures/string.h
+        source/structures/string.cpp
+        source/sceneresources.cpp
+        source/sceneresources.h
 )
 
 if (WIN32)
@@ -39,6 +54,9 @@ find_package(Vulkan REQUIRED)
 #add_subdirectory(include/EASTL-3.21.23)
 find_package(fmt CONFIG REQUIRED)
 find_package(KTX REQUIRED)
+find_package(EASTL CONFIG REQUIRED)
+find_package(EABase CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED HINTS "C:/Users/ulver/.vcpkg-clion/vcpkg/packages/nlohmann-json_x64-mingw-dynamic")
 add_subdirectory(include/simdjson-3.10.1)
 add_subdirectory(include/fastgltf-0.8.0)
 add_subdirectory(include/vk-bootstrap-main)
@@ -58,8 +76,9 @@ target_link_libraries(${PROJECT_NAME}
         simdjson::simdjson
         fmt::fmt
         KTX::ktx
-        #EASTL
-        #EABase
+        EASTL
+        EABase
+        nlohmann_json::nlohmann_json
 )
 
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "AMD64")

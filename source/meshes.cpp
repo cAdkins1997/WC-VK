@@ -1,17 +1,10 @@
-/*
+
 #include "meshes.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../include/stb_image.h"
+/*#define STB_IMAGE_IMPLEMENTATION
+#include "../include/stb_image.h"*/
 
-void wcvk::meshes::Node::refreshTransform(const glm::mat4 &parentMatrix) {
-    worldTransform = parentMatrix * localTransform;
-    for (const auto& c : children) {
-        c->refreshTransform(worldTransform);
-    }
-}
-
-std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
+eastl::optional<eastl::vector<eastl::shared_ptr<Mesh>>> wcvk::meshes::load_gltf_meshes(
     const std::filesystem::path &filePath,
     commands::UploadContext &context
     )
@@ -27,9 +20,10 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
         throw std::runtime_error("failed to read GLTF buffer");
     }
 
-    std::vector<std::shared_ptr<Mesh>> meshes;
-    std::vector<uint32_t> indices;
-    std::vector<Vertex> vertices;
+    eastl::vector<eastl::shared_ptr<Mesh>> meshes;
+    eastl::vector<uint32_t> indices;
+    eastl::vector<Vertex> vertices;
+
     fastgltf::Asset& gltf = asset.get();
     for (auto& mesh : asset->meshes) {
         Mesh newMesh;
@@ -96,12 +90,6 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
             newMesh.surfaces.push_back(newSurface);
         }
 
-        std::vector<std::shared_ptr<Material>> materials;
-        for (auto& material : gltf.materials) {
-            auto newMaterial = std::make_shared<Material>();
-            materials.push_back(newMaterial);
-        }
-
         if constexpr (constexpr bool OverrideColors = false) {
             for (Vertex& vtx : vertices) {
                 vtx.color = glm::vec4(vtx.normal, 1.f);
@@ -109,12 +97,13 @@ std::optional<std::vector<std::shared_ptr<Mesh>>> wcvk::meshes::loadGltfMeshes(
         }
         newMesh.mesh = context.upload_mesh(vertices, indices);
 
-        meshes.emplace_back(std::make_shared<Mesh>(std::move(newMesh)));
+        meshes.emplace_back(eastl::make_shared<Mesh>(eastl::move(newMesh)));
     }
 
     return meshes;
 }
 
+/*
 std::optional<wcvk::meshes::GLTF> wcvk::meshes::load_scene_description(
     core::Device &device,
     const std::filesystem::path &filePath,

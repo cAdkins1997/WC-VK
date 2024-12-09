@@ -116,16 +116,17 @@ namespace wcvk::core {
         return newSampler;
     }
 
-    Shader Device::create_shader(const std::string_view filePath) const {
+    Shader Device::create_shader(const eastl::string_view filePath) const {
         std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
 
         if (file.is_open() == false) {
             throw std::runtime_error("Failed to find file!\n");
         }
 
-        size_t fileSize = static_cast<size_t>(file.tellg());
+        size_t fileSize = file.tellg();
 
-        std::vector<uint32_t> buffer (fileSize / sizeof(uint32_t));
+
+        eastl::vector<uint32_t> buffer(fileSize / sizeof(uint32_t));
 
         file.seekg(0);
         file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
@@ -157,10 +158,10 @@ namespace wcvk::core {
             1, &commandBufferSI,
             1, &signalInfo);
         if (auto result = graphicsQueue.submit2( 1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
-            auto stringResult = vk::to_string(result);
-            std::string string = "Failed to submit graphics commands. Error: ";
+            eastl::string stringResult = vk::to_string(result).c_str();
+            eastl::string string = "Failed to submit graphics commands. Error: ";
             string.append(stringResult);
-            throw std::runtime_error(string);
+            throw std::runtime_error(string.c_str());
         }
     }
 
@@ -181,11 +182,11 @@ namespace wcvk::core {
             1, &signalInfo);
 
 
-        if (vk::Result result = graphicsQueue.submit2(1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
-            auto stringResult = vk::to_string(result);
-            std::string string = "Failed to submit compute commands. Error: ";
+        if (const vk::Result result = graphicsQueue.submit2(1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
+            const eastl::string stringResult = to_string(result).c_str();
+            eastl::string string = "Failed to submit compute commands. Error: ";
             string.append(stringResult);
-            throw std::runtime_error(string);
+            throw std::runtime_error(string.c_str());
         }
     }
 
@@ -206,9 +207,9 @@ namespace wcvk::core {
             1, &signalInfo);
         if (auto result = graphicsQueue.submit2(1, &submitInfo, currentFrame.renderFence); result != vk::Result::eSuccess) {
             auto stringResult = vk::to_string(result);
-            std::string string = "Failed to submit upload commands. Error: ";
-            string.append(stringResult);
-            throw std::runtime_error(string);
+            eastl::string string = "Failed to submit upload commands. Error: ";
+            string.append(stringResult.c_str());
+            throw std::runtime_error(string.c_str());
         }
     }
 
@@ -227,7 +228,7 @@ namespace wcvk::core {
             );
     }
 
-    void Device::submit_immediate_work(std::function<void(VkCommandBuffer cmd)> &&function) {
+    void Device::submit_immediate_work(eastl::function<void(VkCommandBuffer cmd)> &&function) const {
         vk_check(device.resetFences(1, &immediateFence), "Failed to reset fences");
 
         immediateCommandBuffer.reset({});
@@ -293,7 +294,7 @@ namespace wcvk::core {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-            window = glfwCreateWindow(width, height, "Window Title", nullptr, nullptr);
+            window = glfwCreateWindow(width, height, "WCVK", nullptr, nullptr);
             glfwSetCursorPosCallback(window, mouse_callback);
             glfwSetScrollCallback(window, scroll_callback);
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -374,8 +375,19 @@ namespace wcvk::core {
             swapchainExtent = vkbSwapchain.extent;
             swapchain = vkbSwapchain.swapchain;
 
-            swapchainImages = vkbSwapchain.get_images().value();
-            swapchainImageViews = vkbSwapchain.get_image_views().value();
+            std::vector<VkImage> tempImageArray = vkbSwapchain.get_images().value();
+            std::vector<VkImageView> tempImageViewArray = vkbSwapchain.get_image_views().value();
+
+            swapchainImages.reserve(tempImageArray.size());
+            swapchainImageViews.reserve(tempImageViewArray.size());
+
+            for (auto image : tempImageArray) {
+                swapchainImages.push_back(image);
+            }
+
+            for (auto view : tempImageViewArray) {
+                swapchainImageViews.push_back(view);
+            }
 
             init_commands();
             init_sync_objects();

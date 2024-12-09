@@ -262,19 +262,19 @@ namespace wcvk::commands {
     }
 
     UploadContext::UploadContext(const vk::Device& device, const vk::CommandBuffer &commandBuffer, const VmaAllocator& allocator) :
-    _device(device) ,_allocator(allocator), _commandBuffer(commandBuffer) {}
+    _device(device) , _allocator(allocator), _commandBuffer(commandBuffer) {}
 
-    void UploadContext::begin() {
+    void UploadContext::begin() const {
         _commandBuffer.reset();
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
         vk_check(_commandBuffer.begin(&beginInfo), "Failed to begin command buffer");
     }
 
-    void UploadContext::end() {
+    void UploadContext::end() const {
         _commandBuffer.end();
     }
 
-    void UploadContext::image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout) {
+    void UploadContext::image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout) const {
 
         vk::ImageMemoryBarrier2 imageBarrier(
 vk::PipelineStageFlagBits2::eAllCommands,vk::AccessFlagBits2::eMemoryWrite,
@@ -373,7 +373,7 @@ vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryWrite | vk
         _commandBuffer.blitImage2(&blitInfo);
     }
 
-    MeshBuffer UploadContext::upload_mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
+    MeshBuffer UploadContext::upload_mesh(const eastl::vector<Vertex> &vertices, const eastl::vector<uint32_t> &indices) {
         const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
         const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 

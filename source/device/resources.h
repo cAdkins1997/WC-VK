@@ -8,7 +8,7 @@
 enum class DeviceAddress : uint64_t { Invalid = 0 };
 
 struct DeletionQueue {
-    std::deque<std::function<void()>> deletors;
+    eastl::deque<std::function<void()>> deletors;
 
     void push_function(std::function<void()>&& function) {
         deletors.push_back(function);
@@ -32,7 +32,7 @@ struct FrameData {
     vk::Semaphore renderSemaphore;
     vk::Fence renderFence;
 
-    DescriptorAllocator frameDescriptors;
+    wcvk::descriptors::DescriptorAllocator frameDescriptors;
 };
 
 struct Buffer {
@@ -41,7 +41,7 @@ struct Buffer {
     VmaAllocationInfo info;
     VkMemoryPropertyFlags memoryProperties;
 
-    [[nodiscard]] void* get_mapped_data() const { return info.pMappedData; }
+    void* get_mapped_data() { return info.pMappedData; }
 };
 
 struct Image {

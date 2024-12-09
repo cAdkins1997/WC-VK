@@ -1,6 +1,11 @@
 
 #pragma once
-#include "scenedesc.h"
+#include "memory.h"
+#include "device/device.hpp"
+#include "device/resources.h"
+#include "pipelines/descriptors.h"
+
+#include <EASTL/shared_ptr.h>
 
 namespace wcvk {
     class Application {
@@ -15,7 +20,7 @@ namespace wcvk {
         void init_descriptors();
         void init_pipeline();
 
-        DescriptorAllocator descriptorAllocator;
+        descriptors::DescriptorAllocator descriptorAllocator;
         Pipeline drawImagePipeline;
         Pipeline trianglePipeline;
 
@@ -30,19 +35,14 @@ namespace wcvk {
         vk::RenderingAttachmentInfo depthAttachment;
 
     private:
-        Buffer sceneDataBuffer;
+        Buffer sceneDataBuffer{};
 
         vk::DescriptorSetLayout gpuSceneDataDescriptorLayout;
         MaterialInstance defaultData;
-        GLTF::Material metalRoughMaterial;
-
-        std::shared_ptr<GLTF::LoadedGLTF> sceneDesc;
-        GLTF::DrawContext mainDrawContext;
-        std::unordered_map<std::string, std::shared_ptr<GLTF::Node>> loadedNodes;
 
     private:
         core::Device device;
 
-        std::vector<std::shared_ptr<Mesh>> testMeshes;
+        eastl::vector<eastl::shared_ptr<Mesh>> testMeshes;
     };
 }

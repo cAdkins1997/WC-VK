@@ -27,7 +27,7 @@ public:
     void enable_blending_alphablend();
     void disable_blending();
 
-    std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+    eastl::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
     vk::PipelineRasterizationStateCreateInfo rasterizer;

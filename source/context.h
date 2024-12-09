@@ -64,10 +64,10 @@ namespace wcvk::commands {
     struct UploadContext {
         explicit UploadContext(const vk::Device& device, const vk::CommandBuffer& commandBuffer, const VmaAllocator& allocator);
 
-        void begin();
-        void end();
+        void begin() const;
+        void end() const;
 
-        void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout);
+        void image_barrier(vk::Image image, vk::ImageLayout currentLayout, vk::ImageLayout newLayout) const;
         void buffer_barrier(
             vk::Buffer buffer,
             vk::DeviceSize offset,
@@ -80,7 +80,7 @@ namespace wcvk::commands {
         void copy_buffer(vk::Buffer bufferSrc, vk::Buffer bufferDst, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset, vk::DeviceSize dataSize);
         void copy_image(VkImage src, VkImage dst, VkExtent2D srcSize, VkExtent2D dstSize);
 
-        MeshBuffer upload_mesh(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
+        MeshBuffer upload_mesh(const eastl::vector<Vertex> &vertices, const eastl::vector<uint32_t> &indices);
 
         void upload_texture();
         void upload_image(void* data, Image& image);

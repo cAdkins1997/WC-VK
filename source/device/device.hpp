@@ -6,6 +6,10 @@
 #include "../context.h"
 
 #include <VkBootstrap.h>
+#include <EASTL/vector.h>
+#include <EASTL/string_view.h>
+#include <EASTL/string.h>
+#include <EASTL/functional.h>
 #include <filesystem>
 #include <fstream>
 
@@ -41,7 +45,7 @@ namespace wcvk::core {
             VmaAllocationCreateFlags flags = VMA_ALLOCATION_CREATE_MAPPED_BIT) const;
         [[nodiscard]] Image create_image(vk::Extent3D size, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped) const;
         [[nodiscard]] vk::Sampler create_sampler(vk::Filter minFilter, vk::Filter magFilter, vk::SamplerMipmapMode mipmapMode) const;
-        [[nodiscard]] Shader create_shader(std::string_view filePath) const;
+        [[nodiscard]] Shader create_shader(eastl::string_view filePath) const;
 
         void submit_graphics_work(const commands::GraphicsContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
         void submit_compute_work(const commands::ComputeContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
@@ -49,7 +53,7 @@ namespace wcvk::core {
         void submit_upload_work(const commands::UploadContext& context, vk::PipelineStageFlagBits2 wait, vk::PipelineStageFlagBits2 signal);
         void submit_upload_work(const commands::UploadContext& context);
 
-        void submit_immediate_work(std::function<void(VkCommandBuffer cmd)>&& function);
+        void submit_immediate_work(eastl::function<void(VkCommandBuffer cmd)>&& function) const;
 
         void wait_on_work();
         void present();
@@ -75,8 +79,8 @@ namespace wcvk::core {
         vk::SurfaceKHR surface;
         vk::SwapchainKHR swapchain;
         vk::Format swapchainFormat;
-        std::vector<VkImage> swapchainImages{};
-        std::vector<VkImageView> swapchainImageViews{};
+        eastl::vector<VkImage> swapchainImages{};
+        eastl::vector<VkImageView> swapchainImageViews{};
         vk::Extent2D swapchainExtent{};
         uint32_t swapchainImageIndex = 0;
         FrameData frames[MAX_FRAMES_IN_FLIGHT];
@@ -94,7 +98,7 @@ namespace wcvk::core {
 
         VmaAllocator allocator{};
 
-        std::vector<Image> images;
+        eastl::vector<Image> images;
 
         vk::Fence immediateFence;
         vk::CommandPool immediateCommandPool;
